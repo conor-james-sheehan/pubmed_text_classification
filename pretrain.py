@@ -12,7 +12,7 @@ import numpy as np
 import torch.optim as optim
 import torch
 import torch.nn as nn
-from sklearn.metrics import f1_score, accuracy_score, roc_auc_score
+from sklearn.metrics import f1_score, accuracy_score
 
 from model import TokenizerTransformer, BertClassifier
 
@@ -36,7 +36,7 @@ def preprocess_dataset(ds):
     return X, y
 
 
-def split_data(train, test, num_train, num_valid, pretrained_weights, batch_size):
+def split_data(train, test, num_train, num_valid, num_test, pretrained_weights, batch_size):
     X_train, y_train = preprocess_dataset(train)
     X_test, y_test = preprocess_dataset(test)
 
@@ -46,6 +46,8 @@ def split_data(train, test, num_train, num_valid, pretrained_weights, batch_size
     y_valid = y_train[valid_slice]
     X_train = X_train[train_slice]
     y_train = y_train[train_slice]
+    X_test = X_test[:num_test]
+    y_test = y_test[:num_test]
 
     tokenizer = TokenizerTransformer(pretrained_weights)
     X_train, X_valid, X_test = map(tokenizer.fit_transform, (X_train, X_valid, X_test))
@@ -145,18 +147,18 @@ def predict(model, X_test):
 def get_scores(y_test, y_pred_test):
     scores = {}
     y_test, y_pred_test = map(np.concatenate, [y_test, y_pred_test])
-    scores['f1'] = f1_score(y_test, y_pred_test, average='micro')  # scibert paper uses micro f1 score
-    scores['acc'] = accuracy_score(y_test, y_pred_test)
-    scores['roc_auc'] = roc_auc_score(y_test, y_pred_test)
+    scores['f1_score'] = f1_score(y_test, y_pred_test, average='micro')  # scibert paper uses micro f1 score
+    scores['accuracy'] = accuracy_score(y_test, y_pred_test)
     return scores
 
 
-def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, batch_size, max_epochs, lr, optimizer, criterion,
-                 train_bert):
+def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, num_test, batch_size, max_epochs, lr,
+                 optimizer, criterion, train_bert):
     results = scores
     results['weights'] = pretrained_weights.split('/')[-1]
     results['num_train'] = num_train
     results['num_valid'] = num_valid
+    results['num_test'] = num_test
     results['batch_size'] = batch_size
     results['max_epochs'] = max_epochs
     results['optimiser'] = str(optimizer)
@@ -172,11 +174,11 @@ def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, bat
         json.dump(results, outfile)
 
 
-def pretrain(dataset, pretrained_weights, save_dir='.', num_train=1024, num_valid=256, batch_size=16, max_epochs=100,
-             lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_bert=True):
+def pretrain(dataset, pretrained_weights, save_dir='.', num_train=1024, num_valid=256, num_test=256, batch_size=16,
+             max_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_bert=True):
     train, test = load_data(dataset)
     output_dim = test['label'].max() + 1
-    X_train, y_train, X_valid, y_valid, X_test, y_test = split_data(train, test, num_train, num_valid,
+    X_train, y_train, X_valid, y_valid, X_test, y_test = split_data(train, test, num_train, num_valid, num_test,
                                                                     pretrained_weights, batch_size)
 
     model = BertClassifier(pretrained_weights, output_dim, train_bert=train_bert).to(device)
@@ -185,10 +187,10 @@ def pretrain(dataset, pretrained_weights, save_dir='.', num_train=1024, num_vali
     model = fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_valid, num_valid)
     y_pred_test = predict(model, X_test)
     scores = get_scores(y_test, y_pred_test)
-    save_results(save_dir, scores, pretrained_weights, num_train, num_train, batch_size, max_epochs, lr, optimizer,
-                 criterion, train_bert)
+    save_results(save_dir, scores, pretrained_weights, num_train, num_train, num_test, batch_size, max_epochs, lr,
+                 optimizer, criterion, train_bert)
 
 
 if __name__ == '__main__':
     pretrain('pubmed20k', os.path.join('bert_weights', 'scibert'), train_bert=False, num_train=17, num_valid=17,
-             max_epochs=2)
+             num_test=17, max_epochs=2)
