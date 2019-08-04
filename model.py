@@ -66,10 +66,10 @@ class BertClassifier(nn.Module):
             self.bert = BertModel.from_pretrained(pretrained_weights)
 
         if train_bert:
-            self.bert.eval()
             assert all([p.requires_grad for p in self.bert.parameters()])
         else:
-            assert all([not p.requires_grad for p in self.bert.parameters()])
+            for p in self.bert.parameters():
+                p.requires_grad = False
         self.dropout = nn.Dropout(p=dropout)
         self.out_layer = nn.Linear(BERT_DIM, output_dim)
 

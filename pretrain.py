@@ -129,3 +129,7 @@ def pretrain(dataset, pretrained_weights, num_train=1024, num_valid=256, batch_s
     optimizer = optimizer(model.parameters(), lr=lr)
     model = fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_valid, num_valid)
     return model
+
+
+if __name__ == '__main__':
+    pretrain('pubmed20k', os.path.join('bert_weights', 'scibert'), train_bert=False)
