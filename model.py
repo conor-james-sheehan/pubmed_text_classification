@@ -41,7 +41,7 @@ def _get_custom_bert(pretrained_weights):
     model_fpath = os.path.join(pretrained_weights, model_fname)
     config_fpath = os.path.join(pretrained_weights, 'bert_config.json')
     config = BertConfig.from_json_file(config_fpath)
-    biobert = BertModel(config)
+    custom_bert = BertModel(config)
     state_dict = torch.load(model_fpath)
 
     def _remove_prefix(string):
@@ -51,8 +51,8 @@ def _get_custom_bert(pretrained_weights):
         return string
 
     state_dict = {_remove_prefix(k): v for k, v in state_dict.items() if not k.startswith('cls')}
-    biobert.load_state_dict(state_dict)
-    return biobert
+    custom_bert.load_state_dict(state_dict)
+    return custom_bert
 
 
 class BertClassifier(nn.Module):
@@ -60,9 +60,9 @@ class BertClassifier(nn.Module):
     def __init__(self, pretrained_weights, output_dim, dropout=0.2, train_bert=True):
         super().__init__()
 
-        if pretrained_weights not in BertModel.pretrained_model_archive_map.keys():
+        try:
             self.bert = _get_custom_bert(pretrained_weights)
-        else:
+        except FileNotFoundError:
             self.bert = BertModel.from_pretrained(pretrained_weights)
 
         if train_bert:
