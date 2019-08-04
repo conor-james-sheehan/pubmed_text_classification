@@ -2,7 +2,9 @@
 Module to pretrain sentence classifier
 """
 import os
+import shutil
 from tempfile import gettempdir
+import json
 from time import time
 import pickle
 import pandas as pd
@@ -10,6 +12,7 @@ import numpy as np
 import torch.optim as optim
 import torch
 import torch.nn as nn
+from sklearn.metrics import f1_score, accuracy_score, roc_auc_score
 
 from model import TokenizerTransformer, BertClassifier
 
@@ -118,6 +121,48 @@ def fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_va
     return model
 
 
+def predict(model, X_test):
+    preds = []
+    with torch.no_grad():
+        for X_i in X_test:
+            X_i = X_i.to(device)
+            y_hat_i = model(X_i)
+            _, predicted = torch.max(y_hat_i.data, 1)
+            predicted = predicted.cpu()
+            preds.append(predicted.numpy())
+            del X_i
+            del y_hat_i
+            torch.cuda.empty_cache()
+    return preds
+
+
+def get_scores(y_test, y_pred_test):
+    scores = {}
+    y_test, y_pred_test = map(np.concatenate, y_test, y_pred_test)
+    scores['f1'] = f1_score(y_test, y_pred_test, average='micro')  # scibert paper uses micro f1 score
+    scores['acc'] = accuracy_score(y_test, y_pred_test)
+    scores['roc_auc'] = roc_auc_score(y_test, y_pred_test)
+    return scores
+
+
+def save_results(scores, pretrained_weights, num_train, num_valid, batch_size, max_epochs, lr, optimizer, criterion,
+                 train_bert):
+    results = scores
+    results['weights'] = pretrained_weights.split('/')[-1]
+    results['num_train'] = num_train
+    results['num_valid'] = num_valid
+    results['batch_size'] = batch_size
+    results['max_epochs'] = max_epochs
+    results['optimiser'] = str(optimizer)
+    results['learning_rate'] = lr
+    results['loss_fn'] = str(criterion)
+    results['train_bert'] = train_bert
+    timestamp = '{:.0f}'.format(time())
+    shutil.copyfile(VAL_SAVEPATH, os.path.join('model_saves', '{}.pickle'.format(timestamp)))
+    with open(os.path.join('results', '{}.json'.format(timestamp)), 'w+') as outfile:
+        json.dump(results, outfile)
+
+
 def pretrain(dataset, pretrained_weights, num_train=1024, num_valid=256, batch_size=16, max_epochs=100,
              lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_bert=True):
     train, test = load_data(dataset)
@@ -128,7 +173,10 @@ def pretrain(dataset, pretrained_weights, num_train=1024, num_valid=256, batch_s
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
     model = fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_valid, num_valid)
-    return model
+    y_pred_test = predict(model, X_test)
+    scores = get_scores(y_test, y_pred_test)
+    save_results(scores, pretrained_weights, num_train, num_train, batch_size, max_epochs, lr, optimizer, criterion,
+                 train_bert)
 
 
 if __name__ == '__main__':
