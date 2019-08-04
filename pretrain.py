@@ -1,5 +1,5 @@
 """
-Module to pretrain sentence classifier on the ART corpus
+Module to pretrain sentence classifier
 """
 import os
 from tempfile import gettempdir
@@ -118,7 +118,7 @@ def fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_va
     return model
 
 
-def pretrain(dataset, pretrained_weights='biobert', num_train=1024, num_valid=256, batch_size=16, max_epochs=100,
+def pretrain(dataset, pretrained_weights, num_train=1024, num_valid=256, batch_size=16, max_epochs=100,
              lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_bert=True):
     train, test = load_data(dataset)
     X_train, y_train, X_valid, y_valid, X_test, y_test = split_data(train, test, num_train, num_valid,
