@@ -67,9 +67,9 @@ class BertClassifier(nn.Module):
 
         if train_bert:
             self.bert.eval()
-            assert all([not p.requires_grad for p in self.bert.parameters()])
-        else:
             assert all([p.requires_grad for p in self.bert.parameters()])
+        else:
+            assert all([not p.requires_grad for p in self.bert.parameters()])
         self.dropout = nn.Dropout(p=dropout)
         self.out_layer = nn.Linear(BERT_DIM, output_dim)
 
@@ -91,3 +91,4 @@ def get_bert_model_pipeline(pretrained_weights, output_dim, dropout=0.5, device=
         ('classifier', clf)
     ])
     return model
+
