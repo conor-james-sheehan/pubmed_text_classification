@@ -29,7 +29,7 @@ def numericise_and_rename(df, labels_mapping):
         return labels_mapping[label]
 
     df['label'] = df['label'].apply(_get_numerical_label)
-    df.rename({'text': 'sentence'}, axis=1)
+    df = df.rename({'text': 'sentence'}, axis=1)
     return df
 
 
