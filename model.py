@@ -60,7 +60,7 @@ class BertClassifier(nn.Module):
     def __init__(self, pretrained_weights, output_dim, dropout=0.2, train_bert=True):
         super().__init__()
 
-        if pretrained_weights not in BertModel.pretrained_model_archive_map:
+        if pretrained_weights not in BertModel.pretrained_model_archive_map.keys():
             self.bert = _get_custom_bert(pretrained_weights)
         else:
             self.bert = BertModel.from_pretrained(pretrained_weights)
