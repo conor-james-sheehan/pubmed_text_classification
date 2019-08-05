@@ -90,6 +90,7 @@ def fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_va
         running_loss = 0.0
         for i, batch in enumerate(zip(X_train, y_train), 1):
             optimizer.zero_grad()
+            print('batch {} \t cuda memory: {}'.format(i, torch.cuda.memory_allocated()))
             X_i, y_i = batch
             X_i = X_i.to(device)
             y_i = t.LongTensor(y_i)
