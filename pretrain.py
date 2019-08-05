@@ -96,7 +96,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
             optimizer.zero_grad()
             X_i, y_i = batch
             X_i = X_i.to(device)
-            y_i = t.LongTensor(y_i)
+            y_i = y_i.to(device)
             y_hat_i = model(X_i)
             loss = criterion(y_hat_i, y_i)
             loss.backward()
@@ -112,7 +112,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
             valid_loss = 0
             for j, (X_j, y_j) in enumerate(validloader, 1):
                 X_j = X_j.to(device)
-                y_j = t.LongTensor(y_j)
+                y_j = y_j.to(device)
                 y_hat_j = model(X_j)
                 loss = criterion(y_hat_j, y_j)
                 valid_loss += loss.item()
