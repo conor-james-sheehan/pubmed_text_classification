@@ -9,9 +9,10 @@ from time import time
 import pickle
 import pandas as pd
 import numpy as np
-import torch.optim as optim
 import torch
+import torch.optim as optim
 import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import f1_score, accuracy_score
 
 from model import TokenizerTransformer, BertClassifier
@@ -36,6 +37,23 @@ def preprocess_dataset(ds):
     return X, y
 
 
+class TextClassficationDataSet(Dataset):
+
+    def __init__(self, X, y, pretrained_weights):
+        tokenizer = TokenizerTransformer(pretrained_weights)
+        X = tokenizer.fit_transform(X)
+        self.X = X
+        self.y = y
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, i):
+        X_i = self.X[i]
+        y_i = self.y[i]
+        return X_i, y_i
+
+
 def split_data(train, test, num_train, num_valid, num_test, pretrained_weights, batch_size):
     X_train, y_train = preprocess_dataset(train)
     X_test, y_test = preprocess_dataset(test)
@@ -49,25 +67,11 @@ def split_data(train, test, num_train, num_valid, num_test, pretrained_weights, 
     X_test = X_test[:num_test]
     y_test = y_test[:num_test]
 
-    tokenizer = TokenizerTransformer(pretrained_weights)
-    X_train, X_valid, X_test = map(tokenizer.fit_transform, (X_train, X_valid, X_test))
+    trainloader = DataLoader(TextClassficationDataSet(X_train, y_train, pretrained_weights), batch_size=batch_size)
+    validloader = DataLoader(TextClassficationDataSet(X_valid, y_valid, pretrained_weights), batch_size=batch_size)
+    testloader = DataLoader(TextClassficationDataSet(X_test, y_test, pretrained_weights), batch_size=batch_size)
 
-    def _batch(X, y, n):
-        n_batches = n // batch_size
-        max_whole_batch = n_batches*batch_size
-        last_X = X[:max_whole_batch]
-        last_y = y[:max_whole_batch]
-        X = np.split(X[:max_whole_batch], n_batches)
-        y = np.split(y[:max_whole_batch], n_batches)
-        X.append(last_X)
-        y.append(last_y)
-        return X, y
-
-    X_train, y_train = _batch(X_train, y_train, num_train)
-    X_valid, y_valid = _batch(X_valid, y_valid, num_valid)
-    X_test, y_test = _batch(X_test, y_test, len(y_test))
-
-    return X_train, y_train, X_valid, y_valid, X_test, y_test
+    return trainloader, validloader, testloader
 
 
 def _validation_save(model):
@@ -81,14 +85,14 @@ def _validation_load():
     return model
 
 
-def fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_valid, num_valid):
+def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
     print('epoch\t\ttrain_loss\tvalid_loss\tvalid_acc\ttime')
     print('=======================================================================')
     best_loss = np.inf
     for epoch in range(max_epochs):
         t0 = time()
         running_loss = 0.0
-        for i, batch in enumerate(zip(X_train, y_train), 1):
+        for i, batch in enumerate(trainloader, 1):
             optimizer.zero_grad()
             X_i, y_i = batch
             X_i = X_i.to(device)
@@ -106,27 +110,26 @@ def fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_va
         with torch.no_grad():
             num_correct = 0
             valid_loss = 0
-            for X_i, y_i in zip(X_valid, y_valid):
-                print(torch.cuda.memory_allocated(), torch.cuda.memory_cached())
-                X_i = X_i.to(device)
-                y_i = t.LongTensor(y_i)
-                y_hat_i = model(X_i)
-                loss = criterion(y_hat_i, y_i)
+            for j, (X_j, y_j) in enumerate(validloader, 1):
+                X_j = X_j.to(device)
+                y_j = t.LongTensor(y_j)
+                y_hat_j = model(X_j)
+                loss = criterion(y_hat_j, y_j)
                 valid_loss += loss.item()
-                _, predicted = torch.max(y_hat_i.data, 1)
-                num_correct += (predicted == y_i).sum().item()
-                del X_i
-                del y_i
-                del y_hat_i
+                _, predicted = torch.max(y_hat_j.data, 1)
+                num_correct += (predicted == y_j).sum().item()
+                del X_j
+                del y_j
+                del y_hat_j
                 del loss
                 del predicted
                 torch.cuda.empty_cache()
-            valid_loss /= len(X_valid)
-            running_loss /= len(X_train)
+            valid_loss /= j
+            running_loss /= i
             if valid_loss < best_loss:
                 best_loss = valid_loss
                 _validation_save(model)
-        accuracy = num_correct / num_valid
+        accuracy = num_correct / len(validloader.dataset)
         dt = time() - t0
         print('{}\t\t{:.3f}\t\t{:.3f}\t\t{:.3f}\t\t{:.3f}'
               .format(epoch, running_loss, valid_loss, accuracy, dt))
@@ -134,10 +137,10 @@ def fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_va
     return model
 
 
-def predict(model, X_test):
+def predict(model, testloader):
     preds = []
     with torch.no_grad():
-        for X_i in X_test:
+        for X_i, y_i in testloader:
             X_i = X_i.to(device)
             y_hat_i = model(X_i)
             _, predicted = torch.max(y_hat_i.data, 1)
@@ -152,7 +155,7 @@ def predict(model, X_test):
 
 def get_scores(y_test, y_pred_test):
     scores = {}
-    y_test, y_pred_test = map(np.concatenate, [y_test, y_pred_test])
+    y_pred_test = np.concatenate(y_pred_test)
     scores['f1_score'] = f1_score(y_test, y_pred_test, average='micro')  # scibert paper uses micro f1 score
     scores['accuracy'] = accuracy_score(y_test, y_pred_test)
     return scores
@@ -172,12 +175,15 @@ def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, num
     results['loss_fn'] = str(criterion)
     results['train_bert'] = train_bert
     timestamp = '{:.0f}'.format(time())
-    print(results)
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
+
     model_saves_dir = os.path.join(save_dir, 'model_saves')
+    results_save_dir = os.path.join(save_dir, 'results')
+    for directory in [save_dir, results_save_dir, model_saves_dir]:
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+
     shutil.copyfile(VAL_SAVEPATH, os.path.join(model_saves_dir, '{}.pickle'.format(timestamp)))
-    with open(os.path.join(save_dir, 'results', '{}.json'.format(timestamp)), 'w+') as outfile:
+    with open(os.path.join(results_save_dir, '{}.json'.format(timestamp)), 'w+') as outfile:
         json.dump(results, outfile)
 
 
@@ -185,15 +191,15 @@ def pretrain(dataset, pretrained_weights, save_dir='.', num_train=1024, num_vali
              max_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_bert=True):
     train, test = load_data(dataset)
     output_dim = test['label'].max() + 1
-    X_train, y_train, X_valid, y_valid, X_test, y_test = split_data(train, test, num_train, num_valid, num_test,
-                                                                    pretrained_weights, batch_size)
+    trainloader, validloader, testloader = split_data(train, test, num_train, num_valid,
+                                                      num_test, pretrained_weights, batch_size)
 
     model = BertClassifier(pretrained_weights, output_dim, train_bert=train_bert).to(device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
-    model = fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_valid, num_valid)
-    y_pred_test = predict(model, X_test)
-    scores = get_scores(y_test, y_pred_test)
+    model = fit(model, optimizer, criterion, max_epochs, trainloader, validloader)
+    y_pred_test = predict(model, testloader)
+    scores = get_scores(testloader.dataset.y, y_pred_test)
     save_results(save_dir, scores, pretrained_weights, num_train, num_train, num_test, batch_size, max_epochs, lr,
                  optimizer, criterion, train_bert)
 
