@@ -55,11 +55,10 @@ def _get_custom_bert(pretrained_weights):
     return custom_bert
 
 
-class BertClassifier(nn.Module):
+class BaseBertExtensionModel(nn.Module):
 
-    def __init__(self, pretrained_weights, output_dim, dropout=0.2, train_bert=True):
+    def __init__(self, pretrained_weights, train_bert):
         super().__init__()
-
         try:
             self.bert = _get_custom_bert(pretrained_weights)
         except FileNotFoundError:
@@ -70,6 +69,15 @@ class BertClassifier(nn.Module):
         else:
             for p in self.bert.parameters():
                 p.requires_grad = False
+
+    def forward(self, *input):
+        raise NotImplementedError
+
+
+class BertClassifier(BaseBertExtensionModel):
+
+    def __init__(self, pretrained_weights, output_dim, dropout=0.2, train_bert=False):
+        super().__init__(pretrained_weights, train_bert)
         self.dropout = nn.Dropout(p=dropout)
         self.out_layer = nn.Linear(BERT_DIM, output_dim)
 
