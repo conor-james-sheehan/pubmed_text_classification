@@ -81,8 +81,7 @@ class BertClassifier(BaseBertExtensionModel):
     def __init__(self, pretrained_weights, output_dim, dropout=0.2, train_bert=False):
         super().__init__(pretrained_weights, train_bert)
         self.dropout = nn.Dropout(p=dropout)
-        self.extra_hidden = nn.Linear(BERT_DIM, 256)
-        self.out_layer = nn.Linear(256, output_dim)
+        self.out_layer = nn.Linear(BERT_DIM, output_dim)
         self.tokenizer = TokenizerTransformer(pretrained_weights)
 
     def forward(self, X):
@@ -90,8 +89,7 @@ class BertClassifier(BaseBertExtensionModel):
         X_t = self.tokenizer.fit_transform(X).to(device)
         _, bert_out = self.bert(X_t)
         dropped = self.dropout(bert_out)
-        hidden_out = self.extra_hidden(dropped)
-        logits = self.out_layer(F.relu(hidden_out))
+        logits = self.out_layer(dropped)
         return logits
 
 #
