@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
+from sklearn.feature_extraction.text import CountVectorizer
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import f1_score, accuracy_score
 
@@ -37,7 +38,7 @@ def preprocess_dataset(ds):
     return X, y
 
 
-class TextClassficationDataSet(Dataset):
+class BertTokenDataset(Dataset):
 
     def __init__(self, X, y, pretrained_weights):
         tokenizer = TokenizerTransformer(pretrained_weights)
@@ -54,7 +55,33 @@ class TextClassficationDataSet(Dataset):
         return X_i, y_i
 
 
-def split_data(train, test, num_train, num_valid, num_test, pretrained_weights, batch_size):
+class AbstractDataset(Dataset):
+
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, i):
+        return self.X[i], self.y[i]
+
+
+class BertTokenPlusDictDataset(BertTokenDataset):
+
+    def __init__(self, X, y, pretrained_weights, count_vectorizer):
+        super().__init__(X, y, pretrained_weights)
+        self.X_count = count_vectorizer.fit_transform(X).todense()
+
+    def __getitem__(self, i):
+        X_bert_i, y_i = super().__getitem__(i)
+        X_count_i = self.X_count[i, :]
+        X_i = X_bert_i, X_count_i
+        return X_i, y_i
+
+
+def split_data(train, test, num_train, num_valid, num_test, pretrained_weights, batch_size, model='bert_only'):
     X_train, y_train = preprocess_dataset(train)
     X_test, y_test = preprocess_dataset(test)
 
@@ -67,9 +94,9 @@ def split_data(train, test, num_train, num_valid, num_test, pretrained_weights, 
     X_test = X_test[:num_test]
     y_test = y_test[:num_test]
 
-    trainloader = DataLoader(TextClassficationDataSet(X_train, y_train, pretrained_weights), batch_size=batch_size)
-    validloader = DataLoader(TextClassficationDataSet(X_valid, y_valid, pretrained_weights), batch_size=batch_size)
-    testloader = DataLoader(TextClassficationDataSet(X_test, y_test, pretrained_weights), batch_size=batch_size)
+    trainloader = DataLoader(AbstractDataset(X_train, y_train), batch_size=batch_size)
+    validloader = DataLoader(AbstractDataset(X_valid, y_valid), batch_size=batch_size)
+    testloader = DataLoader(AbstractDataset(X_test, y_test), batch_size=batch_size)
 
     return trainloader, validloader, testloader
 
@@ -95,7 +122,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
         for i, batch in enumerate(trainloader, 1):
             optimizer.zero_grad()
             X_i, y_i = batch
-            X_i = X_i.to(device)
+            # X_i = X_i.to(device)
             y_i = y_i.to(device)
             y_hat_i = model(X_i)
             loss = criterion(y_hat_i, y_i)
@@ -111,7 +138,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
             num_correct = 0
             valid_loss = 0
             for j, (X_j, y_j) in enumerate(validloader, 1):
-                X_j = X_j.to(device)
+                # X_j = X_j.to(device)
                 y_j = y_j.to(device)
                 y_hat_j = model(X_j)
                 loss = criterion(y_hat_j, y_j)
@@ -141,7 +168,7 @@ def predict(model, testloader):
     preds = []
     with torch.no_grad():
         for X_i, y_i in testloader:
-            X_i = X_i.to(device)
+            # X_i = X_i.to(device)
             y_hat_i = model(X_i)
             _, predicted = torch.max(y_hat_i.data, 1)
             predicted = predicted.cpu()

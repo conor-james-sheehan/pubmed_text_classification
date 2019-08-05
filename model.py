@@ -26,8 +26,8 @@ class TokenizerTransformer(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
-        X_t = X.tolist()
-        X_t = map(self.tokenizer.encode, X_t)
+        # X_t = X.tolist()
+        X_t = map(self.tokenizer.encode, X)
         X_t = [X_i[:MAX_BERT_SEQ_LEN] for X_i in X_t]
         X_t = list(map(torch.LongTensor, X_t))
         X_t = pad_sequence(X_t)
@@ -80,11 +80,13 @@ class BertClassifier(BaseBertExtensionModel):
         super().__init__(pretrained_weights, train_bert)
         self.dropout = nn.Dropout(p=dropout)
         self.out_layer = nn.Linear(BERT_DIM, output_dim)
+        self.tokenizer = TokenizerTransformer(pretrained_weights)
 
     def forward(self, X):
         torch.cuda.empty_cache()
-        X = t.LongTensor(X)
-        _, h = self.bert(X)
+        X_t = self.tokenizer.fit_transform(X)
+        X_t = t.LongTensor(X_t)
+        _, h = self.bert(X_t)
         h_drop = self.dropout(h)
         logits = self.out_layer(h_drop)
         return logits
