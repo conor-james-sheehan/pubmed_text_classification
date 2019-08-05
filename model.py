@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from pytorch_transformers import BertTokenizer, BertConfig, BertModel
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.pipeline import Pipeline
@@ -80,18 +81,35 @@ class BertClassifier(BaseBertExtensionModel):
     def __init__(self, pretrained_weights, output_dim, dropout=0.2, train_bert=False):
         super().__init__(pretrained_weights, train_bert)
         self.dropout = nn.Dropout(p=dropout)
-        self.out_layer = nn.Linear(BERT_DIM, output_dim)
+        self.extra_hidden = nn.Linear(BERT_DIM, 256)
+        self.out_layer = nn.Linear(256, output_dim)
         self.tokenizer = TokenizerTransformer(pretrained_weights)
 
     def forward(self, X):
         torch.cuda.empty_cache()
-        X_t = self.tokenizer.fit_transform(X)
-        # X_t = t.LongTensor(X_t)
-        X_t = X_t.to(device)
-        _, h = self.bert(X_t)
-        h_drop = self.dropout(h)
-        logits = self.out_layer(h_drop)
+        X_t = self.tokenizer.fit_transform(X).to(device)
+        _, bert_out = self.bert(X_t)
+        dropped = self.dropout(bert_out)
+        hidden_out = self.extra_hidden(dropped)
+        logits = self.out_layer(F.relu(hidden_out))
         return logits
+
+#
+# class BertPlusDictClassifier(BaseBertExtensionModel):
+#
+#     def __init__(self, count_vectorizer, pretrained_weights, output_dim, dropout=0.2, train_bert=False):
+#         super().__init__(pretrained_weights, train_bert)
+#         self.count_vectorizer = count_vectorizer
+#         self.tokenizer = TokenizerTransformer(pretrained_weights)
+#         self.hidden_dim = BERT_DIM + len(count_vectorizer.vocabulary_)
+#         self.dropout = nn.Dropout(p=dropout)
+#         self.out_layer = nn.Linear(self.hidden_dim, output_dim)
+#
+#     def forward(self, X):
+#         X_b = self.tokenizer.fit_transform(X).to(device)
+#         X_c = t.LongTensor(self.count_vectorizer.transform(X))
+#         _, h = self.bert(X_b)
+#         hidden_in = torch.concat(h, )
 
 
 def get_bert_model_pipeline(pretrained_weights, output_dim, dropout=0.5, device='cpu', *args, **kwargs):
