@@ -14,6 +14,7 @@ MAX_BERT_SEQ_LEN = 512
 
 use_cuda = torch.cuda.is_available()
 t = torch.cuda if use_cuda else torch
+device = 'cuda:0' if use_cuda else 'cpu'
 print('Running on {}'.format('gpu' if use_cuda else 'cpu'))
 
 
@@ -85,7 +86,8 @@ class BertClassifier(BaseBertExtensionModel):
     def forward(self, X):
         torch.cuda.empty_cache()
         X_t = self.tokenizer.fit_transform(X)
-        X_t = t.LongTensor(X_t)
+        # X_t = t.LongTensor(X_t)
+        X_t = X_t.to(device)
         _, h = self.bert(X_t)
         h_drop = self.dropout(h)
         logits = self.out_layer(h_drop)
