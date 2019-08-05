@@ -97,11 +97,12 @@ def fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_va
             loss = criterion(y_hat_i, y_i)
             loss.backward()
             optimizer.step()
+            running_loss += loss.item()
             del X_i
             del y_i
             del y_hat_i
+            del loss
             torch.cuda.empty_cache()
-            running_loss += loss.item()
         with torch.no_grad():
             num_correct = 0
             valid_loss = 0
@@ -109,12 +110,14 @@ def fit(model, optimizer, criterion, max_epochs, X_train, y_train, X_valid, y_va
                 X_i = X_i.to(device)
                 y_i = t.LongTensor(y_i)
                 y_hat_i = model(X_i)
-                valid_loss += criterion(y_hat_i, y_i).item()
+                loss = criterion(y_hat_i, y_i)
+                valid_loss += loss.item()
                 _, predicted = torch.max(y_hat_i.data, 1)
                 num_correct += (predicted == y_i).sum().item()
                 del X_i
                 del y_i
                 del y_hat_i
+                del loss
                 torch.cuda.empty_cache()
             valid_loss /= len(X_valid)
             running_loss /= len(X_train)
@@ -140,6 +143,7 @@ def predict(model, X_test):
             preds.append(predicted.numpy())
             del X_i
             del y_hat_i
+            del predicted
             torch.cuda.empty_cache()
     return preds
 
@@ -169,7 +173,8 @@ def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, num
     print(results)
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
-    shutil.copyfile(VAL_SAVEPATH, os.path.join(save_dir, 'model_saves', '{}.pickle'.format(timestamp)))
+    model_saves_dir = os.path.join(save_dir, 'model_saves')
+    shutil.copyfile(VAL_SAVEPATH, os.path.join(model_saves_dir, '{}.pickle'.format(timestamp)))
     with open(os.path.join(save_dir, 'results', '{}.json'.format(timestamp)), 'w+') as outfile:
         json.dump(results, outfile)
 
