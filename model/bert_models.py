@@ -1,14 +1,11 @@
 import os
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from pytorch_transformers import BertTokenizer, BertConfig, BertModel
 from sklearn.base import TransformerMixin, BaseEstimator
-from sklearn.pipeline import Pipeline
-from skorch import NeuralNetClassifier
 from torch.nn.utils.rnn import pad_sequence
 
-from scripts.convert_bert_pytorch import convert
+from pubmed_text_classification.scripts.convert_bert_pytorch import convert
 
 BERT_DIM = 768
 MAX_BERT_SEQ_LEN = 512
@@ -91,32 +88,3 @@ class BertClassifier(BaseBertExtensionModel):
         dropped = self.dropout(bert_out)
         logits = self.out_layer(dropped)
         return logits
-
-#
-# class BertPlusDictClassifier(BaseBertExtensionModel):
-#
-#     def __init__(self, count_vectorizer, pretrained_weights, output_dim, dropout=0.2, train_bert=False):
-#         super().__init__(pretrained_weights, train_bert)
-#         self.count_vectorizer = count_vectorizer
-#         self.tokenizer = TokenizerTransformer(pretrained_weights)
-#         self.hidden_dim = BERT_DIM + len(count_vectorizer.vocabulary_)
-#         self.dropout = nn.Dropout(p=dropout)
-#         self.out_layer = nn.Linear(self.hidden_dim, output_dim)
-#
-#     def forward(self, X):
-#         X_b = self.tokenizer.fit_transform(X).to(device)
-#         X_c = t.LongTensor(self.count_vectorizer.transform(X))
-#         _, h = self.bert(X_b)
-#         hidden_in = torch.concat(h, )
-
-
-def get_bert_model_pipeline(pretrained_weights, output_dim, dropout=0.5, device='cpu', *args, **kwargs):
-    clf = BertClassifier(pretrained_weights, output_dim, dropout=dropout).to(device)
-    clf = NeuralNetClassifier(clf, device=device, *args, **kwargs)
-    tokenizer = TokenizerTransformer(pretrained_weights)
-    model = Pipeline([
-        ('tokenizer', tokenizer),
-        ('classifier', clf)
-    ])
-    return model
-
