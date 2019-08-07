@@ -2,6 +2,7 @@ import gensim
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from nltk.tokenize import word_tokenize
 
 
 class TransitionMatrix(nn.Module):
@@ -32,7 +33,8 @@ class NewModel(nn.Module):
 
     def forward(self, X):
         sentence, last_label = X
-        tokens = torch.tensor([torch.tensor([self.word_to_ix[word] for word in s] for s in sentence)])
+        tokens = torch.tensor([torch.tensor([self.word_to_ix[word] for word in word_tokenize(s.lower())]
+                                            for s in sentence)])
         vec = self.embedding(tokens)
         lstm_out = self.lstm(vec)
         dropout = self.dropout(lstm_out)

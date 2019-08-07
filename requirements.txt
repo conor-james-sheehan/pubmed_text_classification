@@ -5,3 +5,4 @@ skorch
 scikit-learn
 pytorch-transformers
 gensim
+nltk
