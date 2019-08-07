@@ -19,10 +19,9 @@ class NewModel(nn.Module):
 
     def __init__(self, pretrained_weights, output_dim, hidden_dim=128, lstm_layers=1, dropout=0.5):
         super().__init__()
-        # TODO: get word_to_ix
-        self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(pretrained_weights, binary=True)
-        print(dir(self.word2vec))
-        weights = torch.FloatTensor(self.word2vec.vectors)
+        word2vec = gensim.models.KeyedVectors.load_word2vec_format(pretrained_weights, binary=True)
+        self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
+        weights = torch.FloatTensor(word2vec.vectors)
         self.embedding = nn.Embedding.from_pretrained(weights)
         self.lstm = nn.LSTM(input_size=weights.shape[1], hidden_size=hidden_dim, bidirectional=True,
                             num_layers=lstm_layers)
@@ -33,7 +32,7 @@ class NewModel(nn.Module):
 
     def forward(self, X):
         sentence, last_label = X
-        tokens = self.word2vec.tokenize(sentence)
+        tokens = torch.tensor([torch.tensor([self.word_to_ix[word] for word in s] for s in sentence)])
         vec = self.embedding(tokens)
         lstm_out = self.lstm(vec)
         dropout = self.dropout(lstm_out)
