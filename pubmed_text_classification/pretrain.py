@@ -15,7 +15,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
-from model import BertClassifier
+from pubmed_text_classification.model import BertClassifier
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model.pickle')
 

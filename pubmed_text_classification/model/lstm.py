@@ -20,7 +20,8 @@ class NewModel(nn.Module):
     def __init__(self, pretrained_weights, output_dim, hidden_dim=128, lstm_layers=1, dropout=0.5):
         super().__init__()
         # TODO: get word_to_ix
-        self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(pretrained_weights)
+        self.word2vec = gensim.models.KeyedVectors.load_word2vec_format(pretrained_weights, binary=True)
+        print(dir(self.word2vec))
         weights = torch.FloatTensor(self.word2vec.vectors)
         self.embedding = nn.Embedding.from_pretrained(weights)
         self.lstm = nn.LSTM(input_size=weights.shape[1], hidden_size=hidden_dim, bidirectional=True,
@@ -41,3 +42,16 @@ class NewModel(nn.Module):
 
         logits = fc_out + transition_out
         return logits
+
+
+if __name__ == '__main__':
+    import os
+    pretrained_weights = os.path.join('..', '..', 'pretrained_embeddings',
+                                      'word2vec', 'wikipedia-pubmed-and-PMC-w2v.bin')
+    # model = NewModel(pretrained_weights, output_dim=5)
+
+    from gensim.models.word2vec import Word2Vec
+    model = Word2Vec()
+    model.build_vocab_from_freq({"Word1": 15, "Word2": 20})
+    pass
+

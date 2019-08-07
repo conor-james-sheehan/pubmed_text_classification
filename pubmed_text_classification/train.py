@@ -10,7 +10,7 @@ from torch.nn.utils.rnn import pad_sequence
 from skorch import NeuralNet
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
 
-from model import BioBertMultiLabelClassifier, bert_tokenizer
+from pubmed_text_classification.model import BioBertMultiLabelClassifier, bert_tokenizer
 from dataset_creation import TRAIN_FPATH, TEST_FPATH, LABELS
 
 MODEL_SAVEDIR = 'model_saves'

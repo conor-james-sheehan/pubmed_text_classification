@@ -35,23 +35,17 @@ def main():
     y_test = test['label'].values
 
     count_vectorizer = CountVectorizer(vocabulary=None)
-    # clf = RandomForestClassifier(min_samples_leaf=100, n_estimators=10)
     clf = LogisticRegressionCV()
     model = Pipeline([
         ('count_vectorizer', count_vectorizer),
         ('clf', clf)
     ])
-
-    # param_grid = {'clf__min_samples_leaf': [100, 50, 25],
-    #               'clf__n_estimators': [10, 100, 200]}
-
-    # model = GridSearchCV(model, param_grid=param_grid, n_jobs=-2)
-
     model.fit(X_train, y_train)
     y_pred_test = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred_test)
     f1 = f1_score(y_test, y_pred_test, average='micro')
-    best_words = pd.Series(dict(zip(count_vectorizer.vocabulary_, clf.feature_importances_))).sort_values(ascending=False)
+    # best_words = pd.Series(dict(zip(count_vectorizer.vocabulary_, clf.feature_importances_)))\
+    # .sort_values(ascending=False)
     cm = confusion_matrix(y_test, y_pred_test)
     with open(os.path.join(data_dir, 'labels_mapping.json'), 'r') as infile:
         label_strings = json.load(infile)
