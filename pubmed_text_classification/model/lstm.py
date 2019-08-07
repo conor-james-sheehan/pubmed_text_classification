@@ -33,8 +33,8 @@ class NewModel(nn.Module):
 
     def forward(self, X):
         sentence, last_label = X
-        tokens = torch.tensor([torch.tensor([self.word_to_ix[word] for word in word_tokenize(s.lower())]
-                                            for s in sentence)])
+        tokens = torch.nn.utils.rnn.pad_sequence(
+            [torch.tensor([self.word_to_ix[word] for word in word_tokenize(s.lower())]) for s in sentence])
         vec = self.embedding(tokens)
         lstm_out = self.lstm(vec)
         dropout = self.dropout(lstm_out)
@@ -50,9 +50,5 @@ if __name__ == '__main__':
     pretrained_weights = os.path.join('..', '..', 'pretrained_embeddings',
                                       'word2vec', 'wikipedia-pubmed-and-PMC-w2v.bin')
     # model = NewModel(pretrained_weights, output_dim=5)
-
-    from gensim.models.word2vec import Word2Vec
-    model = Word2Vec()
-    model.build_vocab_from_freq({"Word1": 15, "Word2": 20})
     pass
 
