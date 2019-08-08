@@ -14,7 +14,7 @@ device = 'cuda:0' if use_cuda else 'cpu'
 
 def _to_one_hot(labels, output_dim):
     one_hot = torch.zeros(len(labels), output_dim + 1)
-    for i, j in enumerate(labels):
+    for i, j in enumerate(labels.numpy().tolist()):
         one_hot[i, j] = 1
     return one_hot.to(device)
 
