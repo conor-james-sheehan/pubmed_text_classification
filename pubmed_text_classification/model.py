@@ -6,7 +6,6 @@ import nltk
 from nltk.tokenize import word_tokenize
 
 nltk.download('punkt')
-
 use_cuda = torch.cuda.is_available()
 t = torch.cuda if use_cuda else torch
 device = 'cuda:0' if use_cuda else 'cpu'
@@ -70,4 +69,5 @@ class TransitonModel(nn.Module):
         transition_out = self.transition_matrix(last_label)
 
         logits = fc_out + transition_out
+
         return logits
