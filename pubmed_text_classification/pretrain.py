@@ -32,7 +32,7 @@ def _validation_save(model):
 
 
 def _validation_load(pretrained_weights):
-    model = model_cls(pretrained_weights, 1)
+    model = model_cls(pretrained_weights, 5)
     model.load_state_dict(torch.load(VAL_SAVEPATH))
     return model
 
