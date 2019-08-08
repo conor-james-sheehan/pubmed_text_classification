@@ -74,8 +74,8 @@ class BaseBertExtensionModel(nn.Module):
 
 class BertClassifier(BaseBertExtensionModel):
 
-    def __init__(self, pretrained_weights, output_dim, dropout=0.2, train_bert=False):
-        super().__init__(pretrained_weights, train_bert)
+    def __init__(self, pretrained_weights, output_dim, dropout=0.2, train_embeddings=False):
+        super().__init__(pretrained_weights, train_embeddings)
         self.dropout = nn.Dropout(p=dropout)
         self.out_layer = nn.Linear(BERT_DIM, output_dim)
         self.tokenizer = TokenizerTransformer(pretrained_weights)
