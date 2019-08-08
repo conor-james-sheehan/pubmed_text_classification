@@ -34,7 +34,7 @@ def _validation_save(model):
 def _validation_load(pretrained_weights, train_embeddings, **model_params):
     model = model_cls(pretrained_weights, 5, train_embeddings=train_embeddings, **model_params)
     model.load_state_dict(torch.load(VAL_SAVEPATH))
-    return model
+    return model.to(device)
 
 
 def _get_datasets(num_train, num_test, valid_split):
