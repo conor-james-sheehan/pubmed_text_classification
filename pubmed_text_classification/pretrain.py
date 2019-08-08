@@ -95,6 +95,8 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader, pretr
         dt = time() - t0
         print('{}\t\t{:.3f}\t\t{:.3f}\t\t{:.3f}\t\t{:.3f}'
               .format(epoch, running_loss, valid_loss, accuracy, dt))
+    del model
+    torch.cuda.empty_cache()
     model = _validation_load(pretrained_weights, train_embeddings, **model_params)
     return model
 
