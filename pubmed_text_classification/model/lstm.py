@@ -55,8 +55,9 @@ class TransitonModel(nn.Module):
 
     def forward(self, X):
         sentence, last_label = X
+        # TODO: sort out what to do w/ unknown words
         tokens = torch.nn.utils.rnn.pad_sequence(
-            [torch.tensor([self.word_to_ix[word] for word in word_tokenize(s.lower())], dtype=torch.int64)
+            [torch.tensor([self.word_to_ix.get(word, 0) for word in word_tokenize(s.lower())], dtype=torch.int64)
              for s in sentence]).to(device)
         vec = self.embedding(tokens)
         drop = self.dropout(vec)
