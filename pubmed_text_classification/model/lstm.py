@@ -2,7 +2,10 @@ import gensim
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import nltk
 from nltk.tokenize import word_tokenize
+
+nltk.download('punkt')
 
 use_cuda = torch.cuda.is_available()
 t = torch.cuda if use_cuda else torch
@@ -36,7 +39,7 @@ class TransitonModel(nn.Module):
     def __init__(self, pretrained_weights, output_dim, hidden_dim=128, lstm_layers=1, dropout=0.5,
                  train_embeddings=True):
         super().__init__()
-        # todo: implpement train_embeddings behaviour
+        # todo: implement train_embeddings behaviour
         word2vec = gensim.models.KeyedVectors.load_word2vec_format(pretrained_weights, binary=True)
         self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
         weights = torch.FloatTensor(word2vec.vectors)
