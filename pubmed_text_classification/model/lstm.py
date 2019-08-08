@@ -5,32 +5,42 @@ import torch.nn.functional as F
 from nltk.tokenize import word_tokenize
 
 
+def _to_one_hot(labels, output_dim):
+    one_hot = torch.zeros(len(labels), output_dim + 1)
+    for i, j in enumerate(labels):
+        one_hot[i, j] = 1
+    return one_hot
+
+
 class TransitionMatrix(nn.Module):
 
     def __init__(self, output_dim):
         super().__init__()
-        self.transition_probabilities = nn.Linear(1, output_dim, bias=False)
+        self.transition_probabilities = nn.Linear(output_dim+1, output_dim, bias=False)
 
     def forward(self, previous_label):
-        return self.transition_probabilities(previous_label.unsqueeze(1))
+        """
+
+        :param previous_label: one-hot vector of previous label
+        :return:
+        """
+        return self.transition_probabilities(previous_label)
 
 
-class NewModel(nn.Module):
-    # TODO: rename
+class TransitonModel(nn.Module):
 
     def __init__(self, pretrained_weights, output_dim, hidden_dim=128, lstm_layers=1, dropout=0.5):
         super().__init__()
         word2vec = gensim.models.KeyedVectors.load_word2vec_format(pretrained_weights, binary=True)
         self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
-        # self.word_to_ix = {}
         weights = torch.FloatTensor(word2vec.vectors)
-        # weights = torch.zeros(1, 100)
         self.embedding = nn.Embedding.from_pretrained(weights)
 
         self.lstm = nn.LSTM(input_size=weights.shape[1], hidden_size=hidden_dim//2, bidirectional=True,
                             num_layers=lstm_layers)
         self.dropout = nn.Dropout(dropout)
         self.fc_layer = nn.Linear(hidden_dim, output_dim)
+        self.output_dim = output_dim
 
         self.transition_matrix = TransitionMatrix(output_dim)
 
@@ -45,31 +55,9 @@ class NewModel(nn.Module):
         lstm_out, (h, c) = self.lstm(drop)
         h = torch.cat([h[-2, :, :], h[-1, :, :]], dim=1)
         fc_out = F.relu(self.fc_layer(h))
+
+        last_label = _to_one_hot(last_label, output_dim=self.output_dim)
         transition_out = self.transition_matrix(last_label)
 
         logits = fc_out + transition_out
         return logits
-
-
-if __name__ == '__main__':
-    import os
-    from torch.utils.data import Dataset, DataLoader
-    pretrained_weights = os.path.join('..', '..', 'pretrained_embeddings',
-                                      'word2vec', 'wikipedia-pubmed-and-PMC-w2v.bin')
-    model = NewModel(pretrained_weights, output_dim=5)
-    last_label = torch.FloatTensor([0, 1, 2, 3])
-    sentences = ['oxygen carbon silicon', 'dog cat mouse', 'flu cancer', 'biology chemistry']
-    labels = [1, 2, 3, 4]
-
-    class MyDataSet(Dataset):
-
-        def __len__(self):
-            return 4
-
-        def __getitem__(self, i):
-            return [sentences[i], last_label[i]], labels[i]
-
-
-    dataloader = DataLoader(MyDataSet(), batch_size=2)
-    for X, y in dataloader:
-        yhat = model(X)
