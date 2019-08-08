@@ -31,8 +31,8 @@ def _validation_save(model):
     torch.save(model.state_dict(), VAL_SAVEPATH)
 
 
-def _validation_load():
-    model = model_cls.__new__(model_cls)
+def _validation_load(pretrained_weights):
+    model = model_cls(pretrained_weights, 1)
     model.load_state_dict(torch.load(VAL_SAVEPATH))
     return model
 
@@ -46,7 +46,7 @@ def _get_datasets(num_train, num_test, valid_split):
     return trainset, validset, testset
 
 
-def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
+def fit(model, optimizer, criterion, max_epochs, trainloader, validloader, pretrained_weights):
     print('epoch\t\ttrain_loss\tvalid_loss\tvalid_acc\ttime')
     print('=======================================================================')
     best_loss = np.inf
@@ -94,7 +94,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
         dt = time() - t0
         print('{}\t\t{:.3f}\t\t{:.3f}\t\t{:.3f}\t\t{:.3f}'
               .format(epoch, running_loss, valid_loss, accuracy, dt))
-    model = _validation_load()
+    model = _validation_load(pretrained_weights)
     return model
 
 
@@ -159,7 +159,7 @@ def pretrain(pretrained_weights, save_dir='.', num_train=1024, valid_split=0.2, 
     model = model_cls(pretrained_weights, output_dim, train_embeddings=train_embeddings, **model_params).to(device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
-    model = fit(model, optimizer, criterion, max_epochs, trainloader, validloader)
+    model = fit(model, optimizer, criterion, max_epochs, trainloader, validloader, pretrained_weights)
     y_pred_test = predict(model, testloader)
     scores = get_scores(testloader.dataset.y, y_pred_test)
     save_results(save_dir, scores, pretrained_weights, num_train, num_train, num_test, batch_size, max_epochs, lr,
