@@ -14,10 +14,10 @@ import torch.nn as nn
 from torch.utils.data import random_split, DataLoader
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
-from pubmed_text_classification.model import BertClassifier, TransitonModel
-from pubmed_text_classification.datasets import PubMed20kPrevious, Pubmed20k
+from pubmed_text_classification.model import TransitonModel
+from pubmed_text_classification.datasets import PubMed20kPrevious
 
-model_cls, dataset_cls = TransitonModel, Pubmed20k
+model_cls, dataset_cls = TransitonModel, PubMed20kPrevious
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model.pickle')
 
@@ -122,7 +122,7 @@ def get_scores(y_test, y_pred_test):
 
 
 def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, num_test, batch_size, max_epochs, lr,
-                 optimizer, criterion, train_bert):
+                 optimizer, criterion, train_embeddings):
     results = scores
     results['weights'] = pretrained_weights.split('/')[-1]
     results['num_train'] = num_train
@@ -133,7 +133,7 @@ def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, num
     results['optimiser'] = str(optimizer)
     results['learning_rate'] = lr
     results['loss_fn'] = str(criterion)
-    results['train_bert'] = train_bert
+    results['train_embeddings'] = train_embeddings
     timestamp = '{:.0f}'.format(time())
 
     model_saves_dir = os.path.join(save_dir, 'model_saves')
@@ -164,5 +164,6 @@ def pretrain(pretrained_weights, save_dir='.', num_train=1024, valid_split=0.2, 
 
 
 if __name__ == '__main__':
-    pretrain(os.path.join('pretrained_embeddings', 'bert_weights', 'scibert'), train_embeddings=False, num_train=17,
+    pretrain(os.path.join('pretrained_embeddings', 'word2vec', 'wikipedia-pubmed-and-PMC-w2v.bin'),
+             train_embeddings=False, num_train=17,
              num_test=17, max_epochs=2)
