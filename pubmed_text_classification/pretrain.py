@@ -28,13 +28,12 @@ print('Running on {}'.format(device))
 
 
 def _validation_save(model):
-    with open(VAL_SAVEPATH, 'wb+') as outfile:
-        pickle.dump(model, outfile)
+    torch.save(model.state_dict(), VAL_SAVEPATH)
 
 
 def _validation_load():
-    with open(VAL_SAVEPATH, 'rb') as infile:
-        model = pickle.load(infile)
+    model = model_cls.__new__(model_cls)
+    model.load_state_dict(torch.load(VAL_SAVEPATH))
     return model
 
 
@@ -52,6 +51,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
     print('=======================================================================')
     best_loss = np.inf
     for epoch in range(max_epochs):
+        model.train()
         t0 = time()
         running_loss = 0.0
         for i, batch in enumerate(trainloader, 1):
@@ -69,6 +69,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
             del loss
             torch.cuda.empty_cache()
         with torch.no_grad():
+            model.eval()
             num_correct = 0
             valid_loss = 0
             for j, (X_j, y_j) in enumerate(validloader, 1):
@@ -100,6 +101,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
 def predict(model, testloader):
     preds = []
     with torch.no_grad():
+        model.eval()
         for X_i, y_i in testloader:
             y_hat_i = model(X_i)
             _, predicted = torch.max(y_hat_i.data, 1)
