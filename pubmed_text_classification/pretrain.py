@@ -24,6 +24,7 @@ VAL_SAVEPATH = os.path.join(gettempdir(), 'model.pickle')
 use_cuda = torch.cuda.is_available()
 device = 'cuda:0' if use_cuda else 'cpu'
 t = torch.cuda if use_cuda else torch
+print('Running on {}'.format(device))
 
 
 def _validation_save(model):
@@ -152,7 +153,7 @@ def pretrain(pretrained_weights, save_dir='.', num_train=1024, valid_split=0.2, 
     output_dim = len(testset.LABELS)
     trainloader, validloader, testloader = [DataLoader(ds, batch_size=batch_size)
                                             for ds in (trainset, validset, testset)]
-    model = BertClassifier(pretrained_weights, output_dim, train_bert=train_embeddings).to(device)
+    model = model_cls(pretrained_weights, output_dim, train_bert=train_embeddings).to(device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
     model = fit(model, optimizer, criterion, max_epochs, trainloader, validloader)

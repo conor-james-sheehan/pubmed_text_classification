@@ -13,7 +13,6 @@ MAX_BERT_SEQ_LEN = 512
 use_cuda = torch.cuda.is_available()
 t = torch.cuda if use_cuda else torch
 device = 'cuda:0' if use_cuda else 'cpu'
-print('Running on {}'.format('gpu' if use_cuda else 'cpu'))
 
 
 class TokenizerTransformer(BaseEstimator, TransformerMixin):

@@ -7,7 +7,6 @@ from nltk.tokenize import word_tokenize
 use_cuda = torch.cuda.is_available()
 t = torch.cuda if use_cuda else torch
 device = 'cuda:0' if use_cuda else 'cpu'
-print('Running on {}'.format('gpu' if use_cuda else 'cpu'))
 
 
 def _to_one_hot(labels, output_dim):
