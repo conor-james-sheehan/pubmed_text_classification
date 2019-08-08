@@ -6,7 +6,6 @@ import shutil
 from tempfile import gettempdir
 import json
 from time import time
-import pickle
 import numpy as np
 import torch
 import torch.optim as optim
@@ -167,7 +166,8 @@ def pretrain(pretrained_weights, save_dir='.', num_train=1024, valid_split=0.2, 
     model = fit(model, optimizer, criterion, max_epochs, trainloader, validloader, pretrained_weights, train_embeddings,
                 **model_params)
     y_pred_test = predict(model, testloader)
-    scores = get_scores(testloader.dataset.y, y_pred_test)
+    y_test = testloader.dataset.dataframe['label'].values
+    scores = get_scores(y_test, y_pred_test)
     save_results(save_dir, scores, pretrained_weights, num_train, num_train, num_test, batch_size, max_epochs, lr,
                  optimizer, criterion, train_embeddings, **model_params)
 
