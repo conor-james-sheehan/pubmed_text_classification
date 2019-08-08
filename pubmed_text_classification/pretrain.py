@@ -63,10 +63,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader, pretr
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
-            del X_i
-            del y_i
-            del y_hat_i
-            del loss
+            del X_i, y_i, y_hat_i, loss
             torch.cuda.empty_cache()
         with torch.no_grad():
             model.eval()
@@ -79,11 +76,7 @@ def fit(model, optimizer, criterion, max_epochs, trainloader, validloader, pretr
                 valid_loss += loss.item()
                 _, predicted = torch.max(y_hat_j.data, 1)
                 num_correct += (predicted == y_j).sum().item()
-                del X_j
-                del y_j
-                del y_hat_j
-                del loss
-                del predicted
+                del X_j, y_j, y_hat_j, loss, predicted
                 torch.cuda.empty_cache()
             valid_loss /= j
             running_loss /= i
@@ -110,9 +103,7 @@ def predict(model, testloader):
             _, predicted = torch.max(y_hat_i.data, 1)
             predicted = predicted.cpu()
             preds.append(predicted.numpy())
-            del X_i
-            del y_hat_i
-            del predicted
+            del X_i, y_hat_i, predicted
             torch.cuda.empty_cache()
     return preds
 
@@ -126,12 +117,12 @@ def get_scores(y_test, y_pred_test):
     return scores
 
 
-def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, num_test, batch_size, max_epochs, lr,
+def save_results(save_dir, scores, pretrained_weights, num_train, valid_split, num_test, batch_size, max_epochs, lr,
                  optimizer, criterion, train_embeddings, **model_params):
     results = scores
     results['weights'] = pretrained_weights.split('/')[-1]
     results['num_train'] = num_train
-    results['num_valid'] = num_valid
+    results['valid_split'] = valid_split
     results['num_test'] = num_test
     results['batch_size'] = batch_size
     results['max_epochs'] = max_epochs
@@ -165,6 +156,7 @@ def pretrain(pretrained_weights, save_dir='.', num_train=1024, valid_split=0.2, 
     optimizer = optimizer(model.parameters(), lr=lr)
     model = fit(model, optimizer, criterion, max_epochs, trainloader, validloader, pretrained_weights, train_embeddings,
                 **model_params)
+    del trainloader, validloader
     y_pred_test = predict(model, testloader)
     y_test = testloader.dataset.dataframe['label'].values
     scores = get_scores(y_test, y_pred_test)
