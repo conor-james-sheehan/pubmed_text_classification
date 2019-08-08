@@ -150,12 +150,13 @@ def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, num
 
 
 def pretrain(pretrained_weights, save_dir='.', num_train=1024, valid_split=0.2, num_test=256, batch_size=16,
-             max_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_embeddings=True):
+             max_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_embeddings=True,
+             **model_params):
     trainset, validset, testset = _get_datasets(num_train, num_test, valid_split)
     output_dim = len(testset.LABELS)
     trainloader, validloader, testloader = [DataLoader(ds, batch_size=batch_size)
                                             for ds in (trainset, validset, testset)]
-    model = TransitonModel(pretrained_weights, output_dim, train_embeddings=train_embeddings).to(device)
+    model = model_cls(pretrained_weights, output_dim, train_embeddings=train_embeddings, **model_params).to(device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
     model = fit(model, optimizer, criterion, max_epochs, trainloader, validloader)
