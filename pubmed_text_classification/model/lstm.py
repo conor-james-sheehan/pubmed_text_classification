@@ -4,12 +4,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 from nltk.tokenize import word_tokenize
 
+use_cuda = torch.cuda.is_available()
+t = torch.cuda if use_cuda else torch
+device = 'cuda:0' if use_cuda else 'cpu'
+print('Running on {}'.format('gpu' if use_cuda else 'cpu'))
+
 
 def _to_one_hot(labels, output_dim):
     one_hot = torch.zeros(len(labels), output_dim + 1)
     for i, j in enumerate(labels):
         one_hot[i, j] = 1
-    return one_hot
+    return one_hot.to(device)
 
 
 class TransitionMatrix(nn.Module):
@@ -29,8 +34,10 @@ class TransitionMatrix(nn.Module):
 
 class TransitonModel(nn.Module):
 
-    def __init__(self, pretrained_weights, output_dim, hidden_dim=128, lstm_layers=1, dropout=0.5):
+    def __init__(self, pretrained_weights, output_dim, hidden_dim=128, lstm_layers=1, dropout=0.5,
+                 train_embeddings=True):
         super().__init__()
+        # todo: implpement train_embeddings behaviour
         word2vec = gensim.models.KeyedVectors.load_word2vec_format(pretrained_weights, binary=True)
         self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
         weights = torch.FloatTensor(word2vec.vectors)
@@ -48,7 +55,7 @@ class TransitonModel(nn.Module):
         sentence, last_label = X
         tokens = torch.nn.utils.rnn.pad_sequence(
             [torch.tensor([self.word_to_ix.get(word, 0) for word in word_tokenize(s.lower())], dtype=torch.int64)
-             for s in sentence])
+             for s in sentence]).to(device)
         vec = self.embedding(tokens)
         drop = self.dropout(vec)
 

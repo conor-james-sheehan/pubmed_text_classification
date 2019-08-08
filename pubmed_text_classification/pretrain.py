@@ -7,67 +7,23 @@ from tempfile import gettempdir
 import json
 from time import time
 import pickle
-import pandas as pd
 import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import random_split, DataLoader
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
-from pubmed_text_classification.model import BertClassifier
+from pubmed_text_classification.model import BertClassifier, TransitonModel
+from pubmed_text_classification.datasets import PubMed20kPrevious, Pubmed20k
+
+model_cls, dataset_cls = TransitonModel, Pubmed20k
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model.pickle')
 
 use_cuda = torch.cuda.is_available()
 device = 'cuda:0' if use_cuda else 'cpu'
 t = torch.cuda if use_cuda else torch
-
-
-def load_data(dataset):
-    dataset_dir = os.path.join('datasets', dataset)
-    train = pd.read_csv(os.path.join(dataset_dir, 'train.csv'), index_col=0)
-    test = pd.read_csv(os.path.join(dataset_dir, 'test.csv'), index_col=0)
-    return train, test
-
-
-def preprocess_dataset(ds):
-    X = ds['sentence'].values
-    y = ds['label'].values
-    return X, y
-
-
-class AbstractDataset(Dataset):
-
-    def __init__(self, X, y):
-        self.X = X
-        self.y = y
-
-    def __len__(self):
-        return len(self.y)
-
-    def __getitem__(self, i):
-        return self.X[i], self.y[i]
-
-
-def split_data(train, test, num_train, num_valid, num_test, pretrained_weights, batch_size, model='bert_only'):
-    X_train, y_train = preprocess_dataset(train)
-    X_test, y_test = preprocess_dataset(test)
-
-    valid_slice = slice(num_train, num_train + num_valid)
-    train_slice = slice(0, num_train)
-    X_valid = X_train[valid_slice]
-    y_valid = y_train[valid_slice]
-    X_train = X_train[train_slice]
-    y_train = y_train[train_slice]
-    X_test = X_test[:num_test]
-    y_test = y_test[:num_test]
-
-    trainloader = DataLoader(AbstractDataset(X_train, y_train), batch_size=batch_size)
-    validloader = DataLoader(AbstractDataset(X_valid, y_valid), batch_size=batch_size)
-    testloader = DataLoader(AbstractDataset(X_test, y_test), batch_size=batch_size)
-
-    return trainloader, validloader, testloader
 
 
 def _validation_save(model):
@@ -79,6 +35,15 @@ def _validation_load():
     with open(VAL_SAVEPATH, 'rb') as infile:
         model = pickle.load(infile)
     return model
+
+
+def _get_datasets(num_train, num_test, valid_split):
+    trainset = dataset_cls('train', num_load=num_train)
+    testset = dataset_cls('test', num_load=num_test)
+    num_valid = int(valid_split*len(trainset))
+    num_train = len(trainset) - num_valid
+    trainset, validset = random_split(trainset, [num_train, num_valid])
+    return trainset, validset, testset
 
 
 def fit(model, optimizer, criterion, max_epochs, trainloader, validloader):
@@ -181,23 +146,22 @@ def save_results(save_dir, scores, pretrained_weights, num_train, num_valid, num
         json.dump(results, outfile)
 
 
-def pretrain(dataset, pretrained_weights, save_dir='.', num_train=1024, num_valid=256, num_test=256, batch_size=16,
-             max_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_bert=True):
-    train, test = load_data(dataset)
-    output_dim = test['label'].max() + 1
-    trainloader, validloader, testloader = split_data(train, test, num_train, num_valid,
-                                                      num_test, pretrained_weights, batch_size)
-
-    model = BertClassifier(pretrained_weights, output_dim, train_bert=train_bert).to(device)
+def pretrain(pretrained_weights, save_dir='.', num_train=1024, valid_split=0.2, num_test=256, batch_size=16,
+             max_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, train_embeddings=True):
+    trainset, validset, testset = _get_datasets(num_train, num_test, valid_split)
+    output_dim = len(testset.LABELS)
+    trainloader, validloader, testloader = [DataLoader(ds, batch_size=batch_size)
+                                            for ds in (trainset, validset, testset)]
+    model = BertClassifier(pretrained_weights, output_dim, train_bert=train_embeddings).to(device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
     model = fit(model, optimizer, criterion, max_epochs, trainloader, validloader)
     y_pred_test = predict(model, testloader)
     scores = get_scores(testloader.dataset.y, y_pred_test)
     save_results(save_dir, scores, pretrained_weights, num_train, num_train, num_test, batch_size, max_epochs, lr,
-                 optimizer, criterion, train_bert)
+                 optimizer, criterion, train_embeddings)
 
 
 if __name__ == '__main__':
-    pretrain('pubmed20k', os.path.join('bert_weights', 'scibert'), train_bert=False, num_train=17, num_valid=17,
+    pretrain(os.path.join('pretrained_embeddings', 'bert_weights', 'scibert'), train_embeddings=False, num_train=17,
              num_test=17, max_epochs=2)
