@@ -48,7 +48,7 @@ class AbstractSentencesDataset(Dataset):
     @classmethod
     def from_csv(cls, path, **kwargs):
         df = pd.read_csv(path, **kwargs)
-        assert set(df.columns) == cls.COLUMNS,\
+        assert set(df.columns) > cls.COLUMNS,\
             'csv file must have the following columns to be loaded as a dataset: {}'.format(list(cls.COLUMNS))
         return cls(df)
 

@@ -7,7 +7,7 @@ import torch
 from sklearn.metrics import accuracy_score, confusion_matrix
 from torch.utils.data import DataLoader
 
-from .datasets import SupplementedAbstractSentencesDataset
+from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset, AbstractSentencesDataset
 
 
 def _get_scores(y_test, y_pred_test):
@@ -18,6 +18,10 @@ def _get_scores(y_test, y_pred_test):
 
 
 class Results:
+    MODEL_FNAME = 'model.pickle'
+    CONFIG_FNAME = 'config.json'
+    META_FNAME = 'meta.json'
+    SCORES_FNAME = 'scores.json'
 
     def __init__(self, model, scores, valid_split, batch_size, n_epochs, lr):
         self.model = model
@@ -35,7 +39,7 @@ class Results:
         self._save_scores()
 
     def _save_model(self):
-        model_savepath = os.path.join('model.pickle')
+        model_savepath = os.path.join(self.results_dir, self.MODEL_FNAME)
         torch.save(self.model.state_dict(), model_savepath)
 
     def _save_json(self, obj, fname):
@@ -44,14 +48,14 @@ class Results:
             json.dump(obj, outfile)
 
     def _save_config(self):
-        config_path = os.path.join(self.results_dir, 'config.json')
+        config_path = os.path.join(self.results_dir, self.CONFIG_FNAME)
         self.model.config.to_json(config_path)
 
     def _save_meta(self):
-        self._save_json(self.meta, 'meta.json')
+        self._save_json(self.meta, self.META_FNAME)
 
     def _save_scores(self):
-        self._save_json(self.scores, 'score.json')
+        self._save_json(self.scores, self.SCORES_FNAME)
 
 
 def _predict(model, testloader):
@@ -85,4 +89,42 @@ def evaluate(model, test_path, savedir, valid_split, batch_size, n_epochs, lr):
     scores = _get_scores(y_test, y_pred_test)
     results = Results(model, scores, valid_split, batch_size, n_epochs, lr)
     results.save(savedir)
-    return y_pred_test, testset
+
+
+def rolling_predict(model, fpath):
+    """
+
+    :param model:
+    :type model: TransitionModel
+    :param fpath: path to a .csv file containing an unlabelled dataset.
+    :type fpath: str
+    :return:
+    """
+    dataset = AbstractSentencesDataset.from_csv(fpath)
+    dataset.dataframe['predicted_label'] = np.nan
+    gb = dataset.dataframe.groupby('abstract')
+    for abstract in gb.groups:
+        abstract_df = gb.get_group(abstract)
+        X_0 = abstract_df['sentence'].iloc[0], -1
+        y = model(X_0)
+        dataset.dataframe.loc[abstract_df.index[0], 'predicted_label'] = y
+        for i in range(1, len(abstract_df)):
+            X = abstract_df['sentence'].iloc[i], y
+            y = model(X)
+            dataset.dataframe.loc[abstract_df.index[i], 'predicted_label'] = y
+    pass
+
+
+if __name__ == '__main__':
+    import pkg_resources
+    import os
+    fpath = os.path.join(pkg_resources.resource_filename('pubmed_text_classification', 'datasets'),
+                         'pubmed-glyco', 'corpus.csv')
+
+    class DummyModel:
+        def __call__(self, X):
+            return np.random.choice(list(range(5)))
+
+    rolling_predict(DummyModel(), fpath)
+    # rolling_predict()
+    pass

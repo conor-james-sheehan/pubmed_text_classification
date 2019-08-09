@@ -40,5 +40,5 @@ import os
 os.chdir('pubmed_text_classification/pubmed_text_classification/scripts')
 ```
 ```
-!python '/content/gdrive/My Drive/pretrained_embeddings/wikipedia-pubmed-and-PMC-w2v.bin'
+!python train_and_evaluate.py --pretrained_embeddings '/content/gdrive/My Drive/pretrained_embeddings/wikipedia-pubmed-and-PMC-w2v.bin'
 ```

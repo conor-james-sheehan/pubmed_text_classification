@@ -8,7 +8,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import random_split, DataLoader
 
-from pubmed_text_classification.model import TransitonModel, load_model, TransitionModelConfig
+from pubmed_text_classification.model import TransitionModel, load_model, TransitionModelConfig
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model')  # temporary location to save best model during validation
@@ -92,7 +92,7 @@ def _get_model(model_path, config):
             config = TransitionModelConfig(**config)
 
     if model_path is None:
-        model_path = TransitonModel(config)
+        model_path = TransitionModel(config)
     else:
         model_path = load_model(model_path, config)
     return model_path

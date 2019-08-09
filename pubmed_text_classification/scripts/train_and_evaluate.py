@@ -11,16 +11,14 @@ parser = ArgumentParser()
 parser.add_argument('--train_path', default=None, type=str,
                     help='Path to csv file to use for training dataset. '
                          'If unspecified, will use the pubmed20k dataset.')
-parser.add_argument('--test_path', default=None, type=str,
-                    help='Path to csv file to use for test dataset. '
-                         'If unspecified, will use the pubmed20k dataset.')
+
 parser.add_argument('--pretrained_embeddings', type=str,
-                    default='../pretrained_embeddings/wikipedia-pubmed-and-PMC-w2v.bin',
+                    default='../../pretrained_embeddings/wikipedia-pubmed-and-PMC-w2v.bin',
                     help='Path to file containing pretrained word2vec weights in binary format.')
 parser.add_argument('--pretrained_model', default=None, type=str,
                     help='Path to binary save file of a previously trained model. '
                          'If not specified, creates a new model to use.')
-parser.add_argument('--savedir', default='../results', type=str,
+parser.add_argument('--savedir', default='../../results', type=str,
                     help='Path to directory wherein to save results and models.')
 parser.add_argument('--n_epochs', default=100, type=int, help='Number of epochs to train for.')
 parser.add_argument('--batch_size', default=256, type=int)

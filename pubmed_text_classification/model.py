@@ -34,7 +34,7 @@ class TransitionMatrix(nn.Module):
         return self.transition_probabilities(previous_label)
 
 
-class TransitonModel(nn.Module):
+class TransitionModel(nn.Module):
 
     def __init__(self, config):
         super().__init__()
@@ -98,6 +98,6 @@ class TransitionModelConfig:
 
 def load_model(path, config):
     # TODO: perhaps an api function to load model w/o/ knowing what its params were; perhaps a config for the model
-    model = TransitonModel(config)
+    model = TransitionModel(config)
     model.load_state_dict(torch.load(path))
     return model.to(device)
