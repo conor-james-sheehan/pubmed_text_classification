@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
-
+import sys
+import os
+sys.path.append(os.path.abspath('..'))
 from pubmed_text_classification.train import train
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 from pubmed_text_classification.evaluate import evaluate
