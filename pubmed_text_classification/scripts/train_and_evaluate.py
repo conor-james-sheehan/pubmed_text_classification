@@ -1,10 +1,7 @@
 from argparse import ArgumentParser
 import sys
 import os
-from pathlib import Path
 sys.path += list(map(os.path.abspath, ['..', '../..', '../../..']))  # TODO: actually figure out how python paths work
-from pprint import pprint
-pprint(sys.path)
 from pubmed_text_classification.train import train
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 from pubmed_text_classification.evaluate import evaluate

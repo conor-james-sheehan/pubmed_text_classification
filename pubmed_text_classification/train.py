@@ -104,6 +104,6 @@ def train(config=None, train_path=None, model_path=None, num_train=None, valid_s
     trainloader, validloader = [DataLoader(ds, batch_size=batch_size) for ds in (trainset, validset)]
     model = _get_model(model_path, config)
     criterion = criterion(reduction='mean')
-    optimizer = optimizer(model_path.parameters(), lr=lr)
+    optimizer = optimizer(model.parameters(), lr=lr)
     model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader)
     return model
