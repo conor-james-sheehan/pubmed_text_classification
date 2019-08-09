@@ -1,4 +1,5 @@
 import os
+from collections import Mapping
 from tempfile import gettempdir
 from time import time
 import numpy as np
@@ -7,7 +8,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import random_split, DataLoader
 
-from pubmed_text_classification.model import TransitonModel
+from pubmed_text_classification.model import TransitonModel, load_model, TransitionModelConfig
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model')  # temporary location to save best model during validation
@@ -19,16 +20,19 @@ t = torch.cuda if use_cuda else torch
 print('Running on {}'.format(device))
 
 
-def _split_data(num_train, valid_split):
+def _split_data(train_path, num_train, valid_split):
     # split the training set into training and validation
-    trainset = SupplementedAbstractSentencesDataset.from_txt('train', num_load=num_train)
+    if train_path is None:
+        trainset = SupplementedAbstractSentencesDataset.from_txt('train', num_load=num_train)
+    else:
+        trainset = SupplementedAbstractSentencesDataset.from_csv(train_path)
     num_valid = int(valid_split*len(trainset))
     num_train = len(trainset) - num_valid
     trainset, validset = random_split(trainset, [num_train, num_valid])
     return trainset, validset
 
 
-def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader, pretrained_weights, **model_params):
+def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader):
     print('epoch\t\ttrain_loss\tvalid_loss\tvalid_acc\ttime')
     print('=======================================================================')
     best_loss = np.inf
@@ -70,42 +74,37 @@ def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader, pret
         print('{}\t\t{:.3f}\t\t{:.3f}\t\t{:.3f}\t\t{:.3f}'
               .format(epoch, running_loss, valid_loss, accuracy, dt))
     model = model.cpu()
+    config = model.config
     del model
     torch.cuda.empty_cache()
-    model = _load_model(VAL_SAVEPATH, pretrained_weights, **model_params)
+    model = load_model(VAL_SAVEPATH, config)
     return model
 
 
-def _load_model(path, pretrained_weights, **model_params):
-    # TODO: perhaps an api function to load model w/o/ knowing what its params were; perhaps a config for the model
-    model = TransitonModel(pretrained_weights, OUTPUT_DIM, **model_params)
-    model.load_state_dict(torch.load(path))
-    return model.to(device)
-
-
-def _get_model(model_path, pretrained_weights, **model_params):
-    if model_path is None:
-        model_path = TransitonModel(pretrained_weights, OUTPUT_DIM, **model_params)
+def _get_model(model_path, config):
+    if config is None:
+        config = TransitionModelConfig(OUTPUT_DIM)
     else:
-        model_path = _load_model(model_path, pretrained_weights, **model_params)
+        if isinstance(config, str):
+            # assume config is a path to a .json config
+            config = TransitionModelConfig.from_json(config)
+        if isinstance(config, Mapping):
+            # kwargs to pass to config class init
+            config = TransitionModelConfig(**config)
+
+    if model_path is None:
+        model_path = TransitonModel(config)
+    else:
+        model_path = load_model(model_path, config)
     return model_path
         
 
-def train(pretrained_weights, model_path=None, num_train=None, valid_split=0.2, batch_size=256,
-          n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss,
-          **model_params):
-    trainset, validset = _split_data(num_train, valid_split)
+def train(config=None, train_path=None, model_path=None, num_train=None, valid_split=0.2,
+          batch_size=256, n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss):
+    trainset, validset = _split_data(train_path, num_train, valid_split)
     trainloader, validloader = [DataLoader(ds, batch_size=batch_size) for ds in (trainset, validset)]
-    model = _get_model(model_path, pretrained_weights, **model_params)
-
+    model = _get_model(model_path, config)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model_path.parameters(), lr=lr)
-    model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader, pretrained_weights,
-                 **model_params)
+    model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader)
     return model
-
-    
-if __name__ == '__main__':
-    train(os.path.join('pretrained_embeddings', 'word2vec', 'wikipedia-pubmed-and-PMC-w2v.bin'),
-          train_embeddings=False, num_train=17,
-          num_test=17, n_epochs=2)

@@ -11,7 +11,7 @@ class AbstractSentencesDataset(Dataset):
         self.dataframe = dataframe
 
     @classmethod
-    def from_txt(cls, set, num_load):
+    def from_txt(cls, set, num_load=None):
         assert set in ('train', 'test')
         path = os.path.join('pubmed_text_classification', 'datasets', 'pubmed20k', '{}_clean.txt'.format(set))
         with open(path, 'r') as infile:

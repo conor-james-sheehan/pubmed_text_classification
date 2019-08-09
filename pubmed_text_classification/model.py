@@ -1,9 +1,12 @@
+import json
 import gensim
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import nltk
 from nltk.tokenize import word_tokenize
+
+from pubmed_text_classification.train import OUTPUT_DIM, device
 
 nltk.download('punkt')
 use_cuda = torch.cuda.is_available()
@@ -35,22 +38,22 @@ class TransitionMatrix(nn.Module):
 
 class TransitonModel(nn.Module):
 
-    def __init__(self, pretrained_weights, output_dim, hidden_dim=128, lstm_layers=1, dropout=0.5,
-                 train_embeddings=True):
+    def __init__(self, config):
         super().__init__()
+        self.config = config
         # todo: implement train_embeddings behaviour
-        word2vec = gensim.models.KeyedVectors.load_word2vec_format(pretrained_weights, binary=True)
+        word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_weights, binary=True)
         self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
         weights = torch.FloatTensor(word2vec.vectors)
         self.embedding = nn.Embedding.from_pretrained(weights)
 
-        self.lstm = nn.LSTM(input_size=weights.shape[1], hidden_size=hidden_dim//2, bidirectional=True,
-                            num_layers=lstm_layers)
-        self.dropout = nn.Dropout(dropout)
-        self.fc_layer = nn.Linear(hidden_dim, output_dim)
-        self.output_dim = output_dim
+        self.lstm = nn.LSTM(input_size=weights.shape[1], hidden_size=config.hidden_dim//2, bidirectional=True,
+                            num_layers=config.lstm_layers)
+        self.dropout = nn.Dropout(config.dropout)
+        self.fc_layer = nn.Linear(config.hidden_dim, config.output_dim)
+        self.output_dim = config.output_dim
 
-        self.transition_matrix = TransitionMatrix(output_dim)
+        self.transition_matrix = TransitionMatrix(self.output_dim)
 
     def forward(self, X):
         sentence, last_label = X
@@ -71,3 +74,33 @@ class TransitonModel(nn.Module):
         logits = fc_out + transition_out
 
         return logits
+
+
+class TransitionModelConfig:
+
+    def __init__(self, output_dim, pretrained_weights='../pretrained_weights/wikipedia-pubmed-and-PMC-w2v.bin',
+                 hidden_dim=512, lstm_layers=2, dropout=0.5, train_embeddings=False):
+        self.output_dim = output_dim
+        self.pretrained_weights = pretrained_weights
+        self.hidden_dim = hidden_dim
+        self.lstm_layers = lstm_layers
+        self.dropout = dropout
+        self.train_embeddings = train_embeddings
+
+    def to_json(self, path):
+        with open(path, 'w+') as outfile:
+            json.dump(self.__dict__, outfile)
+
+    @classmethod
+    def from_json(cls, path):
+        with open(path, 'r') as infile:
+            _vars = json.load(infile)
+        return cls(**_vars)
+
+
+def load_model(path, config):
+    # TODO: perhaps an api function to load model w/o/ knowing what its params were; perhaps a config for the model
+    model = TransitonModel(config)
+    model.load_state_dict(torch.load(path))
+    return model.to(device)
+
