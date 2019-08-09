@@ -1,8 +1,8 @@
 from argparse import ArgumentParser
 
-from pubmed_text_classification.train import train, OUTPUT_DIM
-from pubmed_text_classification.evaluate import evaluate
-from pubmed_text_classification.model import TransitionModelConfig
+from ..train import train, OUTPUT_DIM
+from ..evaluate import evaluate
+from ..model import TransitionModelConfig
 
 parser = ArgumentParser()
 parser.add_argument('--train_path', default=None,

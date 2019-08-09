@@ -8,8 +8,8 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import random_split, DataLoader
 
-from pubmed_text_classification.model import TransitonModel, load_model, TransitionModelConfig
-from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
+from .model import TransitonModel, load_model, TransitionModelConfig
+from .datasets import SupplementedAbstractSentencesDataset
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model')  # temporary location to save best model during validation
 OUTPUT_DIM = len(SupplementedAbstractSentencesDataset.LABELS)  # number of classes (= 5)

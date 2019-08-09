@@ -7,7 +7,7 @@ import torch
 from sklearn.metrics import accuracy_score, confusion_matrix
 from torch.utils.data import DataLoader
 
-from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
+from .datasets import SupplementedAbstractSentencesDataset
 
 
 def _get_scores(y_test, y_pred_test):
