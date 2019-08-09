@@ -6,7 +6,6 @@ import torch.nn.functional as F
 import nltk
 from nltk.tokenize import word_tokenize
 
-from pubmed_text_classification.train import OUTPUT_DIM, device
 
 nltk.download('punkt')
 use_cuda = torch.cuda.is_available()
@@ -103,4 +102,3 @@ def load_model(path, config):
     model = TransitonModel(config)
     model.load_state_dict(torch.load(path))
     return model.to(device)
-

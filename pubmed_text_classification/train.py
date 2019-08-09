@@ -8,11 +8,10 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import random_split, DataLoader
 
-from .model import TransitonModel, load_model, TransitionModelConfig
-from .datasets import SupplementedAbstractSentencesDataset
+from pubmed_text_classification.model import TransitonModel, load_model, TransitionModelConfig
+from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model')  # temporary location to save best model during validation
-OUTPUT_DIM = len(SupplementedAbstractSentencesDataset.LABELS)  # number of classes (= 5)
 
 use_cuda = torch.cuda.is_available()
 device = 'cuda:0' if use_cuda else 'cpu'
@@ -83,7 +82,7 @@ def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader):
 
 def _get_model(model_path, config):
     if config is None:
-        config = TransitionModelConfig(OUTPUT_DIM)
+        config = TransitionModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS)
     else:
         if isinstance(config, str):
             # assume config is a path to a .json config

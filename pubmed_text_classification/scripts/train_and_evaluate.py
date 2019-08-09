@@ -1,8 +1,9 @@
 from argparse import ArgumentParser
 
-from ..train import train, OUTPUT_DIM
-from ..evaluate import evaluate
-from ..model import TransitionModelConfig
+from pubmed_text_classification.train import train
+from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
+from pubmed_text_classification.evaluate import evaluate
+from pubmed_text_classification.model import TransitionModelConfig
 
 parser = ArgumentParser()
 parser.add_argument('--train_path', default=None,
@@ -28,12 +29,13 @@ def main():
     test_path = cmd_args.test_path
     pretrained_weights = cmd_args.pretrained_weights
     pretrained_model = cmd_args.pretrained_model
-    savedir = cmd_args.save_dir
+    savedir = cmd_args.savedir
     n_epochs = cmd_args.n_epochs
     batch_size = cmd_args.batch_size
     valid_split = cmd_args.valid_split
     lr = cmd_args.lr
-    config = TransitionModelConfig(OUTPUT_DIM, pretrained_weights=pretrained_weights)
+    config = TransitionModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS,
+                                   pretrained_weights=pretrained_weights)
     model = train(config, train_path=train_path, model_path=pretrained_model,
                   valid_split=valid_split, n_epochs=n_epochs,
                   batch_size=batch_size, lr=lr)

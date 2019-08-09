@@ -1,10 +1,12 @@
 import os
 import pandas as pd
 from torch.utils.data import Dataset
+from pkg_resources import resource_filename
 
 
 class AbstractSentencesDataset(Dataset):
     LABELS = {'background': 0, 'objective': 1, 'methods': 2, 'results': 3, 'conclusions': 4}
+    NUM_LABELS = len(LABELS)
     COLUMNS = {'abstract', 'sentence', 'label'}
 
     def __init__(self, dataframe):
@@ -13,7 +15,8 @@ class AbstractSentencesDataset(Dataset):
     @classmethod
     def from_txt(cls, set, num_load=None):
         assert set in ('train', 'test')
-        path = os.path.join('pubmed_text_classification', 'datasets', 'pubmed20k', '{}_clean.txt'.format(set))
+        path = os.path.join(resource_filename('pubmed_text_classification', 'datasets'),\
+                            'pubmed20k', '{}_clean.txt'.format(set))
         with open(path, 'r') as infile:
             txt = infile.read()
         # split per abstract
