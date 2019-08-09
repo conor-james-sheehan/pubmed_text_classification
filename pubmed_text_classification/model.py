@@ -41,7 +41,7 @@ class TransitonModel(nn.Module):
         super().__init__()
         self.config = config
         # todo: implement train_embeddings behaviour
-        word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_weights, binary=True)
+        word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_embeddings, binary=True)
         self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
         weights = torch.FloatTensor(word2vec.vectors)
         self.embedding = nn.Embedding.from_pretrained(weights)
@@ -77,10 +77,10 @@ class TransitonModel(nn.Module):
 
 class TransitionModelConfig:
 
-    def __init__(self, output_dim, pretrained_weights='../pretrained_weights/wikipedia-pubmed-and-PMC-w2v.bin',
+    def __init__(self, output_dim, pretrained_embeddings='../pretrained_embeddings/wikipedia-pubmed-and-PMC-w2v.bin',
                  hidden_dim=512, lstm_layers=2, dropout=0.5, train_embeddings=False):
         self.output_dim = output_dim
-        self.pretrained_weights = pretrained_weights
+        self.pretrained_embeddings = pretrained_embeddings
         self.hidden_dim = hidden_dim
         self.lstm_layers = lstm_layers
         self.dropout = dropout

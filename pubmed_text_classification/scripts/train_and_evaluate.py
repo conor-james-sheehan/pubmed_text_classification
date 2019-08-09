@@ -32,7 +32,7 @@ def main():
     cmd_args = parser.parse_args()
     train_path = cmd_args.train_path
     test_path = cmd_args.test_path
-    pretrained_weights = cmd_args.pretrained_weights
+    pretrained_embdeddings = cmd_args.pretrained_embeddings
     pretrained_model = cmd_args.pretrained_model
     savedir = cmd_args.savedir
     n_epochs = cmd_args.n_epochs
@@ -40,7 +40,7 @@ def main():
     valid_split = cmd_args.valid_split
     lr = cmd_args.lr
     config = TransitionModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS,
-                                   pretrained_weights=pretrained_weights)
+                                   pretrained_embeddings=pretrained_embdeddings)
     model = train(config, train_path=train_path, model_path=pretrained_model,
                   valid_split=valid_split, n_epochs=n_epochs,
                   batch_size=batch_size, lr=lr)
