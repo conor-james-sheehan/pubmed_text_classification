@@ -6,7 +6,6 @@ import torch.nn.functional as F
 import nltk
 from nltk.tokenize import word_tokenize
 
-
 nltk.download('punkt')
 use_cuda = torch.cuda.is_available()
 t = torch.cuda if use_cuda else torch

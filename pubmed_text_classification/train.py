@@ -102,7 +102,7 @@ def train(config=None, train_path=None, model_path=None, num_train=None, valid_s
           batch_size=256, n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss):
     trainset, validset = _split_data(train_path, num_train, valid_split)
     trainloader, validloader = [DataLoader(ds, batch_size=batch_size) for ds in (trainset, validset)]
-    model = _get_model(model_path, config)
+    model = _get_model(model_path, config).to(device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
     model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader)
