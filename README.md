@@ -24,7 +24,7 @@ python train_and_evaluate.py
 ### 2.2 Running in google colab
 
 First download the embeddings, and put them in your Google Drive in a folder called 'pretrained_embeddings'. Then the following code should work:
-```jupyter
+```python
 # mount google drive
 from google.colab import drive
 drive.mount('/content/gdrive')
@@ -35,6 +35,7 @@ drive.mount('/content/gdrive')
 !git clone --single-branch --branch refactor https://github.com/cjs220/pubmed_text_classification.git
 ```
 ```python
+# pretrain on pubmed20k
 import os
 os.chdir('pubmed_text_classification/pubmed_text_classification/scripts')
 ```
