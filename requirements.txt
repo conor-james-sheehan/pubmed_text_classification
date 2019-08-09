@@ -1,6 +1,6 @@
-python>3.6
+python>=3.6
 pandas
-torch>1
+torch>=1
 numpy
 scikit-learn
 gensim
