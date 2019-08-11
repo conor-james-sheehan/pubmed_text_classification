@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import torch
 import sys
 import os
 
@@ -15,14 +16,13 @@ parser.add_argument('--savedir', default='../../predictions', type=str,
 parser.add_argument('--pretrained_path', default=None, type=str,
                     help='To a results directory containing a saved model & config. If unspecified, will use the '
                          'latest folder in /results')
-parser.add_argument('--batch_size', default=256, type=int)
 
 
 def main():
     cmd_args = parser.parse_args()
     data_path = cmd_args.data_path
-    pretrained_path = cmd_args.pretrained_path
     savedir = cmd_args.savedir
+    pretrained_path = cmd_args.pretrained_path
 
     if pretrained_path is None:
         results_dir = '../../results'
@@ -35,7 +35,8 @@ def main():
                 for fname in [getattr(Results, attr+'_FNAME') for attr in ('MODEL', 'CONFIG')]]), \
         'directory {} does not contain the required files'.format(pretrained_path)
     config = TransitionModelConfig.from_json(os.path.join(pretrained_path, Results.CONFIG_FNAME))
-    model = load_model(os.path.join(pretrained_path, Results.MODEL_FNAME), config)
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    model = load_model(os.path.join(pretrained_path, Results.MODEL_FNAME), config).to(device)
     new_ds = rolling_predict(model, data_path)
     if not os.path.exists(savedir):
         os.mkdir(savedir)
