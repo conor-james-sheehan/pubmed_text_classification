@@ -105,7 +105,7 @@ def rolling_predict(model, fpath):
     gb = df.groupby('abstract')
     for abstract in gb.groups:
         abstract_df = gb.get_group(abstract)
-        X_0 = abstract_df['sentence'].iloc[0], -1
+        X_0 = abstract_df['sentence'].iloc[0], torch.FloatTensor([-1])
         y = model(X_0)
         df.loc[abstract_df.index[0], 'predicted_label'] = y
         for i in range(1, len(abstract_df)):
