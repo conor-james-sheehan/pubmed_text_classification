@@ -12,7 +12,7 @@ parser.add_argument('--data_path', type=str,
                     help='Path to csv file for prediction.')
 parser.add_argument('--savedir', default='../../predictions', type=str,
                     help='Where to save the new csv file containing the model\'s prediction for the dataset.')
-parser.add_argument('--model_dir', default=None, type=str,
+parser.add_argument('--pretrained_path', default=None, type=str,
                     help='To a results directory containing a saved model & config. If unspecified, will use the '
                          'latest folder in /results')
 parser.add_argument('--batch_size', default=256, type=int)
@@ -20,8 +20,8 @@ parser.add_argument('--batch_size', default=256, type=int)
 
 def main():
     cmd_args = parser.parse_args()
-    pretrained_path = cmd_args.test_path
     data_path = cmd_args.data_path
+    pretrained_path = cmd_args.pretrained_path
     savedir = cmd_args.savedir
 
     if pretrained_path is None:
