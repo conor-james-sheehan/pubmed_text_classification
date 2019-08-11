@@ -111,12 +111,12 @@ def rolling_predict(model, fpath):
 
     for abstract in gb.groups:
         abstract_df = gb.get_group(abstract)
-        X_0 = abstract_df['sentence'].iloc[0], torch.FloatTensor([-1])
+        X_0 = [abstract_df['sentence'].iloc[0]], torch.FloatTensor([-1]).unsqueeze(0)
         y = _predict_class(X_0)
         print(y)
         df.loc[abstract_df.index[0], 'predicted_label'] = y.item()
         for i in range(1, len(abstract_df)):
-            X = abstract_df['sentence'].iloc[i], y
+            X = abstract_df['sentence'].iloc[i], y.unsqueeze(0)
             y = _predict_class(X)
             df.loc[abstract_df.index[i], 'predicted_label'] = y.item()
     return df
