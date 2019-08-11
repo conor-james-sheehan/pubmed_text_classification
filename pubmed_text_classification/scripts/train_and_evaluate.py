@@ -29,7 +29,6 @@ parser.add_argument('--lr', default=0.01, type=float, help='Learning rate')
 def main():
     cmd_args = parser.parse_args()
     train_path = cmd_args.train_path
-    test_path = cmd_args.test_path
     pretrained_embdeddings = cmd_args.pretrained_embeddings
     pretrained_model = cmd_args.pretrained_model
     savedir = cmd_args.savedir
