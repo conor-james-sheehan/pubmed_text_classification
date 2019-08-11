@@ -118,6 +118,7 @@ def rolling_predict(model, fpath):
         for i in range(1, len(abstract_df)):
             X = abstract_df['sentence'].iloc[i], y
             y = _predict_class(X)
+            print(y)
             df.loc[abstract_df.index[i], 'predicted_label'] = y.item()
     return df
 
