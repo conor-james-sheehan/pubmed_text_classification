@@ -11,7 +11,9 @@ parser = ArgumentParser()
 parser.add_argument('--train_path', default=None, type=str,
                     help='Path to csv file to use for training dataset. '
                          'If unspecified, will use the pubmed20k dataset.')
-
+parser.add_argument('--test_path', default=None, type=str,
+                    help='Path to csv file to use for test dataset. '
+                         'If unspecified, will use the pubmed20k dataset.')
 parser.add_argument('--pretrained_embeddings', type=str,
                     default='../../pretrained_embeddings/wikipedia-pubmed-and-PMC-w2v.bin',
                     help='Path to file containing pretrained word2vec weights in binary format.')
@@ -29,6 +31,7 @@ parser.add_argument('--lr', default=0.01, type=float, help='Learning rate')
 def main():
     cmd_args = parser.parse_args()
     train_path = cmd_args.train_path
+    test_path = cmd_args.test_path
     pretrained_embdeddings = cmd_args.pretrained_embeddings
     pretrained_model = cmd_args.pretrained_model
     savedir = cmd_args.savedir
