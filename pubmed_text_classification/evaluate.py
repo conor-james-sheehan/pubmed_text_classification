@@ -107,7 +107,7 @@ def rolling_predict(model, fpath):
     def _predict_class(X):
         probs = model(X)
         _, predicted = torch.max(probs.data, 1)
-        return predicted
+        return predicted.cpu()
 
     for abstract in gb.groups:
         abstract_df = gb.get_group(abstract)
