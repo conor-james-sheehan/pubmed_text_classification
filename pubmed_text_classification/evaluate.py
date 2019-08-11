@@ -100,19 +100,19 @@ def rolling_predict(model, fpath):
     :type fpath: str
     :return:
     """
-    dataset = AbstractSentencesDataset.from_csv(fpath)
-    dataset.dataframe['predicted_label'] = np.nan
-    gb = dataset.dataframe.groupby('abstract')
+    df = AbstractSentencesDataset.from_csv(fpath).dataframe
+    df['predicted_label'] = np.nan
+    gb = df.groupby('abstract')
     for abstract in gb.groups:
         abstract_df = gb.get_group(abstract)
         X_0 = abstract_df['sentence'].iloc[0], -1
         y = model(X_0)
-        dataset.dataframe.loc[abstract_df.index[0], 'predicted_label'] = y
+        df.loc[abstract_df.index[0], 'predicted_label'] = y
         for i in range(1, len(abstract_df)):
             X = abstract_df['sentence'].iloc[i], y
             y = model(X)
-            dataset.dataframe.loc[abstract_df.index[i], 'predicted_label'] = y
-    pass
+            df.loc[abstract_df.index[i], 'predicted_label'] = y
+    return df
 
 
 if __name__ == '__main__':
