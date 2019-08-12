@@ -115,9 +115,10 @@ def rolling_classify_csv(model, fpath):
 
 def rolling_classify(model, sentences):
     """
-    Classify sentences from a particular given abstract.
+    Classify sentences from a given abstract.
 
     :param model:
+    :type model: TransitionModel
     :param sentences:
     type sentences: list[str]
     :return: predicted_labels

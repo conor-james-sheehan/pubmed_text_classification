@@ -6,6 +6,10 @@ import torch.nn.functional as F
 import nltk
 from nltk.tokenize import word_tokenize
 
+WORD2VEC_VOCAB_SIZE = 5443656
+WORD2VEC_EMBEDDING_DIM = 200
+
+
 nltk.download('punkt')
 use_cuda = torch.cuda.is_available()
 t = torch.cuda if use_cuda else torch
@@ -40,12 +44,17 @@ class TransitionModel(nn.Module):
         super().__init__()
         self.config = config
         # todo: implement train_embeddings behaviour
-        word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_embeddings, binary=True)
-        self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
-        weights = torch.FloatTensor(word2vec.vectors)
-        self.embedding = nn.Embedding.from_pretrained(weights)
+        if config.pretrained_embeddings is not None:
+            word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_embeddings, binary=True)
+            self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
+            weights = torch.FloatTensor(word2vec.vectors)
+            self.embedding = nn.Embedding.from_pretrained(weights)
+        else:
+            self.word_to_ix = {}
+            weights = torch.zeros(WORD2VEC_VOCAB_SIZE, WORD2VEC_EMBEDDING_DIM)
+            self.embedding = nn.Embedding.from_pretrained(weights)
 
-        self.lstm = nn.LSTM(input_size=weights.shape[1], hidden_size=config.hidden_dim//2, bidirectional=True,
+        self.lstm = nn.LSTM(input_size=WORD2VEC_EMBEDDING_DIM, hidden_size=config.hidden_dim//2, bidirectional=True,
                             num_layers=config.lstm_layers)
         self.dropout = nn.Dropout(config.dropout)
         self.fc_layer = nn.Linear(config.hidden_dim, config.output_dim)
@@ -93,11 +102,11 @@ class TransitionModelConfig:
     def from_json(cls, path):
         with open(path, 'r') as infile:
             _vars = json.load(infile)
+        _vars['pretrained_embeddings'] = None
         return cls(**_vars)
 
 
 def load_model(path, config):
-    # TODO: perhaps an api function to load model w/o/ knowing what its params were; perhaps a config for the model
     model = TransitionModel(config)
     model.load_state_dict(torch.load(path))
     return model.to(device)
