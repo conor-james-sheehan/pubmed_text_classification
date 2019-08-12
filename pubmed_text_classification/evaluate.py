@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from torch.utils.data import DataLoader
 
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset, AbstractSentencesDataset
+from pubmed_text_classification.model import TransitionModelConfig, load_model
 
 
 def _get_scores(y_test, y_pred_test):
@@ -147,9 +148,45 @@ def classify(model, sentences, labels):
     return predictions
 
 
+def rolling_classify_from_pretrained(sentences, pretrained_path):
+    """
+
+    :param sentences: list of sentences from an abstract
+    :type sentences: list[str]
+    :param pretrained_path: path to folder containing pretrained model pickle and config
+    :type pretrained_path: str
+    :return: predictions
+    :rtype: list[int]
+    """
+    model = _get_pretrained_model(pretrained_path)
+    return rolling_classify(model, sentences)
+
+
+def classify_from_pretrained(sentences, labels, pretrained_path):
+    """
+
+    :param sentences: list of sentences from an abstract
+    :type sentences: list[str]
+    :param labels: labels of the sentences
+    :type labels: list[int]
+    :param pretrained_path: path to folder containing pretrained model pickle and config
+    :type pretrained_path: str
+    :return: predictions
+    :rtype: list[int]
+    """
+    model = _get_pretrained_model(pretrained_path)
+    return classify(model, sentences, labels)
+
+
 def _replace_digits(sentence):
     digit_regex = r'(\d+\.\d+|\d+)'
     return re.sub(digit_regex, '@', sentence)
+
+
+def _get_pretrained_model(path):
+    config = TransitionModelConfig.from_json(os.path.join(path, 'config.json'))
+    model = load_model(os.path.join(path, 'model.pickle'), config)
+    return model
 
 
 if __name__ == '__main__':
