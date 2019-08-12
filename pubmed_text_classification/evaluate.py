@@ -187,25 +187,3 @@ def _get_pretrained_model(path):
     config = TransitionModelConfig.from_json(os.path.join(path, 'config.json'))
     model = load_model(os.path.join(path, 'model.pickle'), config)
     return model
-
-
-if __name__ == '__main__':
-    import pkg_resources
-    import os
-    fpath = os.path.join(pkg_resources.resource_filename('pubmed_text_classification', 'datasets'),
-                         'pubmed-glyco', 'corpus.csv')
-
-    class DummyModel:
-        def __call__(self, X):
-            return torch.rand((1, 5))
-
-
-    sentences = ['This is a sentence about background and previous work.',
-                 'The aim of this study was to do some good science.',
-                 'Here is the method we used.',
-                 'These are the results that we found.',
-                 'To conclude, this was a goody study.']
-
-    labels = list(range(len(sentences)))
-    preds = classify(DummyModel(), sentences, labels)
-    pass
