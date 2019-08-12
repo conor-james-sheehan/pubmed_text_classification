@@ -142,6 +142,7 @@ def classify(model, sentences, labels):
     sentences = list(map(_replace_digits, sentences))
     previous_labels = pd.Series(labels).shift(1).fillna(-1).tolist()
     probs = model([sentences, torch.FloatTensor(previous_labels)])
+    print(probs)
     _, y = torch.max(probs.data, 1)
     predictions = y.cpu().numpy().tolist()
     return predictions
