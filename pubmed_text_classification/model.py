@@ -1,4 +1,6 @@
 import json
+from zipfile import ZipFile
+
 import gensim
 import torch
 import torch.nn as nn
@@ -9,6 +11,9 @@ from nltk.tokenize import word_tokenize
 WORD2VEC_VOCAB_SIZE = 5443656
 WORD2VEC_EMBEDDING_DIM = 200
 
+with ZipFile('word_to_ix.json.zip', 'r') as zipfile:
+    with zipfile.open('word_to_ix.json', 'r') as infile:
+        WORD_TO_IX = json.load(infile)
 
 nltk.download('punkt')
 use_cuda = torch.cuda.is_available()
@@ -46,11 +51,9 @@ class TransitionModel(nn.Module):
         # todo: implement train_embeddings behaviour
         if config.pretrained_embeddings is not None:
             word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_embeddings, binary=True)
-            self.word_to_ix = {word: ix for ix, word in enumerate(word2vec.index2word)}
             weights = torch.FloatTensor(word2vec.vectors)
             self.embedding = nn.Embedding.from_pretrained(weights)
         else:
-            self.word_to_ix = {}
             weights = torch.zeros(WORD2VEC_VOCAB_SIZE, WORD2VEC_EMBEDDING_DIM)
             self.embedding = nn.Embedding.from_pretrained(weights)
 
@@ -66,7 +69,8 @@ class TransitionModel(nn.Module):
         sentence, last_label = X
         # TODO: sort out what to do w/ unknown words
         tokens = torch.nn.utils.rnn.pad_sequence(
-            [torch.tensor([self.word_to_ix.get(word, 0) for word in word_tokenize(s.lower())], dtype=torch.int64)
+            [torch.tensor([WORD_TO_IX.get(word, WORD_TO_IX.get('unk')) for word in word_tokenize(s.lower())],
+                          dtype=torch.int64)
              for s in sentence]).to(device)
         vec = self.embedding(tokens)
         drop = self.dropout(vec)
