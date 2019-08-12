@@ -1,0 +1,7 @@
+*.pyc
+/.idea
+data/
+pretrained_embeddings/
+model_saves/
+pubmed_text_classification/results
+results/

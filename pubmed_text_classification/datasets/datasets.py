@@ -1,18 +1,22 @@
 import os
 import pandas as pd
 from torch.utils.data import Dataset
+from pkg_resources import resource_filename
 
 
-class Pubmed20k(Dataset):
-
+class AbstractSentencesDataset(Dataset):
     LABELS = {'background': 0, 'objective': 1, 'methods': 2, 'results': 3, 'conclusions': 4}
+    NUM_LABELS = len(LABELS)
+    COLUMNS = {'abstract', 'sentence', 'label'}
 
-    def __init__(self, set, num_load=None):
-        self._load_txt(set, num_load)
+    def __init__(self, dataframe):
+        self.dataframe = dataframe
 
-    def _load_txt(self, set, num_load):
+    @classmethod
+    def from_txt(cls, set, num_load=None):
         assert set in ('train', 'test')
-        path = os.path.join('pubmed_text_classification', 'datasets', 'pubmed20k', '{}_clean.txt'.format(set))
+        path = os.path.join(resource_filename('pubmed_text_classification', 'datasets'),\
+                            'pubmed20k', '{}_clean.txt'.format(set))
         with open(path, 'r') as infile:
             txt = infile.read()
         # split per abstract
@@ -30,7 +34,7 @@ class Pubmed20k(Dataset):
                 except ValueError:
                     # line just contains ''
                     continue
-                label = self.LABELS[label.lower()]
+                label = cls.LABELS[label.lower()]
                 row = {'label': label, 'sentence': sentence, 'abstract': abs_key}
                 rows.append(row)
             return pd.DataFrame(rows)
@@ -39,7 +43,14 @@ class Pubmed20k(Dataset):
         df = pd.concat(dfs, axis=0)
         if num_load is not None:
             df = df.iloc[:num_load, :]
-        self.dataframe = df
+        return cls(df)
+
+    @classmethod
+    def from_csv(cls, path, **kwargs):
+        df = pd.read_csv(path, **kwargs)
+        assert set(df.columns) > cls.COLUMNS,\
+            'csv file must have the following columns to be loaded as a dataset: {}'.format(list(cls.COLUMNS))
+        return cls(df)
 
     def __len__(self):
         return len(self.dataframe)
@@ -48,10 +59,10 @@ class Pubmed20k(Dataset):
         return self.dataframe['sentence'].iloc[i], self.dataframe['label'].iloc[i]
 
 
-class PubMed20kPrevious(Pubmed20k):
+class SupplementedAbstractSentencesDataset(AbstractSentencesDataset):
 
-    def __init__(self, set, num_load=None):
-        super().__init__(set, num_load=num_load)
+    def __init__(self, dataframe):
+        super().__init__(dataframe)
         gb = self.dataframe.groupby('abstract')
         prev_labels = []
         for abstract in gb.groups:

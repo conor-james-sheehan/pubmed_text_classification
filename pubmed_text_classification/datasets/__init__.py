@@ -1,1 +1,1 @@
-from .datasets import Pubmed20k, PubMed20kPrevious
+from .datasets import AbstractSentencesDataset, SupplementedAbstractSentencesDataset

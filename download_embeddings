@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mkdir pretrained_embeddings
+wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin --directory-prefix=pretrained_embeddings
