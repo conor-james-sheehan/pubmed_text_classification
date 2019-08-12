@@ -2,7 +2,7 @@ import json
 import os
 import re
 from time import time
-
+import pandas as pd
 import numpy as np
 import torch
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -137,6 +137,15 @@ def rolling_classify(model, sentences):
     return predictions
 
 
+def classify(model, sentences, labels):
+    sentences = list(map(_replace_digits, sentences))
+    previous_labels = pd.Series(labels).shift(1).fillna(-1).tolist()
+    probs = model([sentences, torch.FloatTensor(previous_labels)])
+    _, y = torch.max(probs.data, 1)
+    predictions = y.cpu().numpy().tolist()
+    return predictions
+
+
 def _replace_digits(sentence):
     digit_regex = r'(\d+\.\d+|\d+)'
     return re.sub(digit_regex, '@', sentence)
@@ -152,6 +161,13 @@ if __name__ == '__main__':
         def __call__(self, X):
             return torch.rand((1, 5))
 
-    rolling_classify_csv(DummyModel(), fpath)
-    # rolling_predict()
+
+    sentences = ['This is a sentence about background and previous work.',
+                 'The aim of this study was to do some good science.',
+                 'Here is the method we used.',
+                 'These are the results that we found.',
+                 'To conclude, this was a goody study.']
+
+    labels = list(range(len(sentences)))
+    preds = classify(DummyModel(), sentences, labels)
     pass
