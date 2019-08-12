@@ -130,8 +130,8 @@ def rolling_classify(model, sentences):
     predictions = []
     for sentence in sentences:
         X = [sentence], y
-        probs = model(X)
-        _, y = torch.max(probs.data, 1)
+        logits = model(X)
+        _, y = torch.max(logits.data, 1)
         y = y.cpu()
         predictions.append(y.item())
     return predictions
@@ -141,9 +141,8 @@ def classify(model, sentences, labels):
     model.eval()
     sentences = list(map(_replace_digits, sentences))
     previous_labels = pd.Series(labels).shift(1).fillna(-1).tolist()
-    probs = model([sentences, torch.FloatTensor(previous_labels)])
-    print(probs)
-    _, y = torch.max(probs.data, 1)
+    logits = model([sentences, torch.FloatTensor(previous_labels)])
+    _, y = torch.max(logits.data, 1)
     predictions = y.cpu().numpy().tolist()
     return predictions
 
