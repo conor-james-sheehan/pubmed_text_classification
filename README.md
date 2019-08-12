@@ -32,7 +32,7 @@ drive.mount('/content/gdrive')
 # clone the repo
 ```
 ```
-!git clone --single-branch --branch refactor https://github.com/cjs220/pubmed_text_classification.git
+!git clone https://github.com/cjs220/pubmed_text_classification.git
 ```
 ```python
 # pretrain on pubmed20k
