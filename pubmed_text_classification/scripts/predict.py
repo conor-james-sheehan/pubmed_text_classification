@@ -5,7 +5,7 @@ import os
 
 sys.path += list(map(os.path.abspath, ['..', '../..', '../../..']))
 
-from pubmed_text_classification.evaluate import rolling_predict, Results
+from pubmed_text_classification.evaluate import rolling_classify_csv, Results
 from pubmed_text_classification.model import TransitionModelConfig, load_model
 
 parser = ArgumentParser()
@@ -37,7 +37,7 @@ def main():
     config = TransitionModelConfig.from_json(os.path.join(pretrained_path, Results.CONFIG_FNAME))
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     model = load_model(os.path.join(pretrained_path, Results.MODEL_FNAME), config).to(device)
-    new_ds = rolling_predict(model, data_path)
+    new_ds = rolling_classify_csv(model, data_path)
     if not os.path.exists(savedir):
         os.mkdir(savedir)
 

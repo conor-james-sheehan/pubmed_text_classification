@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from time import time
 
 import numpy as np
@@ -91,7 +92,7 @@ def evaluate(model, test_path, savedir, valid_split, batch_size, n_epochs, lr):
     results.save(savedir)
 
 
-def rolling_predict(model, fpath):
+def rolling_classify_csv(model, fpath):
     """
 
     :param model:
@@ -104,23 +105,39 @@ def rolling_predict(model, fpath):
     df['predicted_label'] = np.nan
     gb = df.groupby('abstract')
 
-    def _predict_class(X):
-        probs = model(X)
-        _, predicted = torch.max(probs.data, 1)
-        return predicted.cpu()
-
     for abstract in gb.groups:
         abstract_df = gb.get_group(abstract)
-        X_0 = [abstract_df['sentence'].iloc[0]], torch.FloatTensor([-1])
-        y = _predict_class(X_0)
-        print(y)
-        df.loc[abstract_df.index[0], 'predicted_label'] = y.item()
-        for i in range(1, len(abstract_df)):
-            X = [abstract_df['sentence'].iloc[i]], y
-            y = _predict_class(X)
-            print(y)
-            df.loc[abstract_df.index[i], 'predicted_label'] = y.item()
+        predicted_classes = rolling_classify(model, abstract_df['sentence'])
+        for i, pred in enumerate(predicted_classes):
+            df.loc[abstract_df.index[i], 'predicted_label'] = pred
     return df
+
+
+def rolling_classify(model, sentences):
+    """
+    Classify sentences from a particular given abstract.
+
+    :param model:
+    :param sentences:
+    type sentences: list[str]
+    :return: predicted_labels
+    :rtype: list[int]
+    """
+    sentences = map(_replace_digits, sentences)
+    y = torch.FloatTensor([-1.0])
+    predictions = []
+    for sentence in sentences:
+        X = [sentence], y
+        probs = model(X)
+        _, y = torch.max(probs.data, 1)
+        y = y.cpu()
+        predictions.append(y.item())
+    return predictions
+
+
+def _replace_digits(sentence):
+    digit_regex = r'(\d+\.\d+|\d+)'
+    return re.sub(digit_regex, '@', sentence)
 
 
 if __name__ == '__main__':
@@ -133,6 +150,6 @@ if __name__ == '__main__':
         def __call__(self, X):
             return torch.rand((1, 5))
 
-    rolling_predict(DummyModel(), fpath)
+    rolling_classify_csv(DummyModel(), fpath)
     # rolling_predict()
     pass
