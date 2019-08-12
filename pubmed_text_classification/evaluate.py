@@ -124,6 +124,7 @@ def rolling_classify(model, sentences):
     :return: predicted_labels
     :rtype: list[int]
     """
+    model.eval()
     sentences = map(_replace_digits, sentences)
     y = torch.FloatTensor([-1.0])
     predictions = []
