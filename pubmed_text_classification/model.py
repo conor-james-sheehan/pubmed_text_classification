@@ -7,11 +7,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import nltk
 from nltk.tokenize import word_tokenize
+from pkg_resources import resource_filename
 
 WORD2VEC_VOCAB_SIZE = 5443656
 WORD2VEC_EMBEDDING_DIM = 200
 
-with ZipFile('word_to_ix.json.zip', 'r') as zipfile:
+
+word_to_ix_path = resource_filename('pubmed_text_classification', 'word_to_ix.json.zip')
+with ZipFile(word_to_ix_path, 'r') as zipfile:
     with zipfile.open('word_to_ix.json', 'r') as infile:
         WORD_TO_IX = json.load(infile)
 
