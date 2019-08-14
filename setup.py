@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='AISample',
+    name='pubmed_test_classification',
     version='1.0.0',
     description='pubmed abstract text classification project',
     url='https://github.com/cjs220/pubmed_text_classification',
