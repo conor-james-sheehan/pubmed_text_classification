@@ -51,11 +51,10 @@ class TransitionModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        # todo: implement train_embeddings behaviour
         if config.pretrained_embeddings is not None:
             word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_embeddings, binary=True)
             weights = torch.FloatTensor(word2vec.vectors)
-            self.embedding = nn.Embedding.from_pretrained(weights)
+            self.embedding = nn.Embedding.from_pretrained(weights, freeze=not train_embeddings)
         else:
             weights = torch.zeros(WORD2VEC_VOCAB_SIZE, WORD2VEC_EMBEDDING_DIM)
             self.embedding = nn.Embedding.from_pretrained(weights)
@@ -70,7 +69,6 @@ class TransitionModel(nn.Module):
 
     def forward(self, X):
         sentence, last_label = X
-        # TODO: sort out what to do w/ unknown words
         tokens = torch.nn.utils.rnn.pad_sequence(
             [torch.tensor([WORD_TO_IX.get(word, WORD_TO_IX.get('unk')) for word in word_tokenize(s.lower())],
                           dtype=torch.int64)

@@ -19,18 +19,6 @@ t = torch.cuda if use_cuda else torch
 print('Running on {}'.format(device))
 
 
-def _split_data(train_path, num_train, valid_split):
-    # split the training set into training and validation
-    if train_path is None:
-        trainset = SupplementedAbstractSentencesDataset.from_txt('train', num_load=num_train)
-    else:
-        trainset = SupplementedAbstractSentencesDataset.from_csv(train_path)
-    num_valid = int(valid_split*len(trainset))
-    num_train = len(trainset) - num_valid
-    trainset, validset = random_split(trainset, [num_train, num_valid])
-    return trainset, validset
-
-
 def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader):
     print('epoch\t\ttrain_loss\tvalid_loss\tvalid_acc\ttime')
     print('=======================================================================')
@@ -98,12 +86,17 @@ def _get_model(model_path, config):
     return model_path
         
 
-def train(config=None, train_path=None, model_path=None, num_train=None, valid_split=0.2,
-          batch_size=256, n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss):
-    trainset, validset = _split_data(train_path, num_train, valid_split)
+def train(config=None, model_path=None, num_train=None, num_valid=None, batch_size=256,
+          n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss):
+    trainset = SupplementedAbstractSentencesDataset.from_txt('train', num_load=num_train)
+    validset = SupplementedAbstractSentencesDataset.from_txt('dev', num_load=num_valid)
     trainloader, validloader = [DataLoader(ds, batch_size=batch_size) for ds in (trainset, validset)]
     model = _get_model(model_path, config).to(device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
     model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader)
     return model
+
+
+if __name__ == '__main__':
+    train(num_train=1000, num_valid=100, batch_size=64)
