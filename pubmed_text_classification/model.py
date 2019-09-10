@@ -76,8 +76,8 @@ class TransitionModel(nn.Module):
         drop = self.dropout(vec)
 
         lstm_out, (h, c) = self.lstm(drop)
-        h = torch.cat([h[-2, :, :], h[-1, :, :]], dim=1)
-        fc_out = F.relu(self.fc_layer(h))
+        elem_max, _ = lstm_out.max(dim=0)  # elementwise max over sequence length
+        fc_out = F.relu(self.fc_layer(elem_max))
 
         last_label = _to_one_hot(last_label, output_dim=self.output_dim)
         transition_out = self.transition_matrix(last_label)
