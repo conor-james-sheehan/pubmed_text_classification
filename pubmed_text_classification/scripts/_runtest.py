@@ -27,7 +27,7 @@ def main():
     cfg = TransitionModelConfig(output_dim=SupplementedAbstractSentencesDataset.NUM_LABELS,
                                 pretrained_embeddings=DUMMY_EMBEDDING,
                                 word_to_ix=DummyWord2IX(),
-                                hidden_dim=128,
+                                lstm_hidden_dim=128,
                                 lstm_layers=1)
     train(config=cfg, num_train=1000, num_valid=100, batch_size=64, n_epochs=10)
 
