@@ -70,16 +70,18 @@ def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader):
 
 def _get_model(model_path, config):
     if config is None:
+        # create config w/ default options
         config = TransitionModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS)
     else:
         if isinstance(config, str):
             # assume config is a path to a .json config
             config = TransitionModelConfig.from_json(config)
         if isinstance(config, Mapping):
-            # kwargs to pass to config class init
+            # conifg is kwargs to pass to config class init
             config = TransitionModelConfig(**config)
 
     if model_path is None:
+        # make new model
         model_path = TransitionModel(config)
     else:
         model_path = load_model(model_path, config)
@@ -96,7 +98,3 @@ def train(config=None, model_path=None, num_train=None, num_valid=None, batch_si
     optimizer = optimizer(model.parameters(), lr=lr)
     model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader)
     return model
-
-
-if __name__ == '__main__':
-    train(num_train=1000, num_valid=100, batch_size=64)

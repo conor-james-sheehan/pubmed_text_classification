@@ -51,14 +51,12 @@ class TransitionModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        if config.pretrained_embeddings is not None:
+        if isinstance(config.pretrained_embeddings, str):
             word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_embeddings, binary=True)
             weights = torch.FloatTensor(word2vec.vectors)
-            self.embedding = nn.Embedding.from_pretrained(weights, freeze=not train_embeddings)
         else:
-            weights = torch.zeros(WORD2VEC_VOCAB_SIZE, WORD2VEC_EMBEDDING_DIM)
-            self.embedding = nn.Embedding.from_pretrained(weights)
-
+            weights = config.pretrained_embeddings
+        self.embedding = nn.Embedding.from_pretrained(weights, freeze=not config.train_embeddings)
         self.lstm = nn.LSTM(input_size=WORD2VEC_EMBEDDING_DIM, hidden_size=config.hidden_dim//2, bidirectional=True,
                             num_layers=config.lstm_layers)
         self.dropout = nn.Dropout(config.dropout)
@@ -70,7 +68,8 @@ class TransitionModel(nn.Module):
     def forward(self, X):
         sentence, last_label = X
         tokens = torch.nn.utils.rnn.pad_sequence(
-            [torch.tensor([WORD_TO_IX.get(word, WORD_TO_IX.get('unk')) for word in word_tokenize(s.lower())],
+            [torch.tensor([self.config.word_to_ix.get(word, self.config.word_to_ix.get('unk'))
+                           for word in word_tokenize(s.lower())],
                           dtype=torch.int64)
              for s in sentence]).to(device)
         vec = self.embedding(tokens)
@@ -91,13 +90,14 @@ class TransitionModel(nn.Module):
 class TransitionModelConfig:
 
     def __init__(self, output_dim, pretrained_embeddings='../pretrained_embeddings/wikipedia-pubmed-and-PMC-w2v.bin',
-                 hidden_dim=512, lstm_layers=2, dropout=0.5, train_embeddings=False):
+                 hidden_dim=512, lstm_layers=2, dropout=0.5, train_embeddings=False, word_to_ix=None):
         self.output_dim = output_dim
         self.pretrained_embeddings = pretrained_embeddings
         self.hidden_dim = hidden_dim
         self.lstm_layers = lstm_layers
         self.dropout = dropout
         self.train_embeddings = train_embeddings
+        self.word_to_ix = word_to_ix or WORD_TO_IX
 
     def to_json(self, path):
         with open(path, 'w+') as outfile:
