@@ -7,12 +7,13 @@ import os
 import torch
 
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
-from pubmed_text_classification.evaluate import evaluate
+from pubmed_text_classification.evaluate import evaluate, classify
 from pubmed_text_classification.model import TransitionModelConfig, WORD2VEC_EMBEDDING_DIM
 from pubmed_text_classification.train import train
 
 DUMMY_VOCAB_SIZE = 500
 DUMMY_EMBEDDING = torch.rand(DUMMY_VOCAB_SIZE, WORD2VEC_EMBEDDING_DIM)
+test_sentences = ['a' for _ in range(10)]
 
 
 def main():
@@ -23,12 +24,12 @@ def main():
                                 lstm_hidden_dim=128,
                                 lstm_layers=1)
     batch_size = 64
-    n_epochs = 2
+    n_epochs = 1
     lr = .01
     savedir = os.path.join('../../results')
-    model = train(config=cfg, num_train=1000, num_valid=100, batch_size=batch_size, n_epochs=n_epochs, lr=lr,
-                  use_cuda=False)
+    model = train(config=cfg, num_train=1000, num_valid=100, batch_size=batch_size, n_epochs=n_epochs, lr=lr)
     evaluate(model, savedir, batch_size, n_epochs, lr)
+    classify(model, test_sentences)
 
 
 if __name__ == '__main__':
