@@ -17,15 +17,13 @@ with ZipFile(word_to_ix_path, 'r') as zipfile:
         WORD_TO_IX = json.load(infile)
 
 nltk.download('punkt')
-use_cuda = torch.cuda.is_available()
-t = torch.cuda if use_cuda else torch
-device = 'cuda:0' if use_cuda else 'cpu'
 
 
 class TransitionModel(nn.Module):
 
     def __init__(self, config):
         super().__init__()
+        self.device = None
         self.config = config
         if isinstance(config.pretrained_embeddings, str):
             word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_embeddings, binary=True)
@@ -45,6 +43,10 @@ class TransitionModel(nn.Module):
                                        nn.ReLU(),
                                        nn.Linear(hdim2, config.output_dim))
 
+    def set_device(self, device):
+        self.device = device
+        self.to(device)
+
     def forward(self, X):
         sentence, sentence_num, total_sentences = X
 
@@ -52,14 +54,14 @@ class TransitionModel(nn.Module):
             [torch.tensor([self.config.word_to_ix.get(word, self.config.word_to_ix.get('unk'))
                            for word in word_tokenize(s.lower())],
                           dtype=torch.int64)
-             for s in sentence]).to(device)
+             for s in sentence]).to(self.device)
         vec = self.embedding(tokens)
         drop = self.dropout(vec)
         lstm_out, (h, c) = self.lstm(drop)
         lstm_max, _ = lstm_out.max(dim=0)  # elementwise max over sequence length
-        # sentence_info = torch.cat([sentence_num.unsqueeze(dim=1), total_sentences.unsqueeze(dim=1)], dim=1) \
-        #     .float().to(device)
-        mlp_in = torch.cat([lstm_max], dim=1)
+        sentence_info = torch.cat([sentence_num.unsqueeze(dim=1), total_sentences.unsqueeze(dim=1)], dim=1) \
+            .float().to(self.device)
+        mlp_in = torch.cat([lstm_max, sentence_info], dim=1)
         logits = self.final_mlp(mlp_in)
         return logits
 
@@ -98,7 +100,8 @@ class TransitionModelConfig:
         return cls(**_vars)
 
 
-def load_model(path, config):
+def load_model(path, config, device):
     model = TransitionModel(config)
     model.load_state_dict(torch.load(path))
-    return model.to(device)
+    model.set_device(device)
+    return model

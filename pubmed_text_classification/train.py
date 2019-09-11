@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader
 
 from pubmed_text_classification.model import TransitionModel, load_model, TransitionModelConfig
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
@@ -65,11 +65,11 @@ def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader, devi
     config = model.config
     del model
     torch.cuda.empty_cache()
-    model = load_model(VAL_SAVEPATH, config)
+    model = load_model(VAL_SAVEPATH, config, device)
     return model
 
 
-def _get_model(model_path, config):
+def _get_model(model_path, config, device):
     if config is None:
         # create config w/ default options
         config = TransitionModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS)
@@ -83,10 +83,11 @@ def _get_model(model_path, config):
 
     if model_path is None:
         # make new model
-        model_path = TransitionModel(config)
+        model = TransitionModel(config)
     else:
-        model_path = load_model(model_path, config)
-    return model_path
+        model = load_model(model_path, config, device)
+    model.set_device(device)
+    return model
         
 
 def train(config=None, model_path=None, num_train=None, num_valid=None, batch_size=256,
@@ -96,7 +97,7 @@ def train(config=None, model_path=None, num_train=None, num_valid=None, batch_si
     trainset = SupplementedAbstractSentencesDataset.from_txt('train', num_load=num_train)
     validset = SupplementedAbstractSentencesDataset.from_txt('dev', num_load=num_valid)
     trainloader, validloader = [DataLoader(ds, batch_size=batch_size) for ds in (trainset, validset)]
-    model = _get_model(model_path, config).to(device)
+    model = _get_model(model_path, config, device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
     model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader, device)
