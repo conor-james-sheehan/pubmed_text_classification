@@ -25,10 +25,10 @@ class Results:
     META_FNAME = 'meta.json'
     SCORES_FNAME = 'scores.json'
 
-    def __init__(self, model, scores, valid_split, batch_size, n_epochs, lr):
+    def __init__(self, model, scores, batch_size, n_epochs, lr):
         self.model = model
         self.scores = scores
-        self.meta = dict(valid_split=valid_split, batch_size=batch_size, n_epochs=n_epochs, lr=lr)
+        self.meta = dict(batch_size=batch_size, n_epochs=n_epochs, lr=lr)
         self.results_dir = None
 
     def save(self, savedir):
@@ -74,22 +74,13 @@ def _predict(model, testloader):
     return np.concatenate(preds)
 
 
-def _load_test(test_path):
-    if test_path is None:
-        testset = SupplementedAbstractSentencesDataset.from_txt('test')
-    else:
-        testset = SupplementedAbstractSentencesDataset.from_csv(test_path)
-
-    return testset
-
-
-def evaluate(model, test_path, savedir, valid_split, batch_size, n_epochs, lr):
-    testset = _load_test(test_path)
+def evaluate(model, savedir, batch_size, n_epochs, lr):
+    testset = SupplementedAbstractSentencesDataset.from_txt('test')
     testloader = DataLoader(testset, batch_size=batch_size)
     y_test = testset.dataframe['label'].values
     y_pred_test = _predict(model, testloader)
     scores = _get_scores(y_test, y_pred_test)
-    results = Results(model, scores, valid_split, batch_size, n_epochs, lr)
+    results = Results(model, scores, batch_size, n_epochs, lr)
     results.save(savedir)
 
 

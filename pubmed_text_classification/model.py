@@ -31,7 +31,7 @@ class TransitionModel(nn.Module):
             word2vec = gensim.models.KeyedVectors.load_word2vec_format(config.pretrained_embeddings, binary=True)
             weights = torch.FloatTensor(word2vec.vectors)
         else:
-            weights = config.pretrained_embeddings
+            weights = torch.FloatTensor(config.pretrained_embeddings)
         self.embedding = nn.Embedding.from_pretrained(weights, freeze=not config.train_embeddings)
         self.lstm = nn.LSTM(input_size=WORD2VEC_EMBEDDING_DIM, hidden_size=config.lstm_hidden_dim // 2,
                             bidirectional=True, num_layers=config.lstm_layers)
@@ -56,10 +56,10 @@ class TransitionModel(nn.Module):
         vec = self.embedding(tokens)
         drop = self.dropout(vec)
         lstm_out, (h, c) = self.lstm(drop)
-        elem_max, _ = lstm_out.max(dim=0)  # elementwise max over sequence length
-        sentence_info = torch.cat([sentence_num.unsqueeze(dim=1), total_sentences.unsqueeze(dim=1)], dim=1) \
-            .float().to(device)
-        mlp_in = torch.cat([elem_max, sentence_info], dim=1)
+        lstm_max, _ = lstm_out.max(dim=0)  # elementwise max over sequence length
+        # sentence_info = torch.cat([sentence_num.unsqueeze(dim=1), total_sentences.unsqueeze(dim=1)], dim=1) \
+        #     .float().to(device)
+        mlp_in = torch.cat([lstm_max], dim=1)
         logits = self.final_mlp(mlp_in)
         return logits
 
@@ -78,9 +78,17 @@ class TransitionModelConfig:
         self.train_embeddings = train_embeddings
         self.word_to_ix = word_to_ix or WORD_TO_IX
 
-    def to_json(self, path):
+    def _save(self, path):
         with open(path, 'w+') as outfile:
             json.dump(self.__dict__, outfile)
+
+    def to_json(self, path):
+        try:
+            self._save(path)
+        except TypeError:
+            # pretrained_embeddings is a tensor
+            self.pretrained_embeddings = self.pretrained_embeddings.numpy().tolist()
+            self._save(path)
 
     @classmethod
     def from_json(cls, path):

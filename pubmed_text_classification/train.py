@@ -13,13 +13,14 @@ from pubmed_text_classification.datasets import SupplementedAbstractSentencesDat
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model')  # temporary location to save best model during validation
 
-use_cuda = torch.cuda.is_available()
-device = 'cuda:0' if use_cuda else 'cpu'
-t = torch.cuda if use_cuda else torch
-print('Running on {}'.format(device))
+
+def get_device(use_cuda):
+    # TODO: move to a util file
+    device = 'cuda:0' if use_cuda and torch.cuda.is_available() else 'cpu'
+    return device
 
 
-def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader):
+def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader, device):
     print('epoch\t\ttrain_loss\tvalid_loss\tvalid_acc\ttime')
     print('=======================================================================')
     best_loss = np.inf
@@ -89,12 +90,14 @@ def _get_model(model_path, config):
         
 
 def train(config=None, model_path=None, num_train=None, num_valid=None, batch_size=256,
-          n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss):
+          n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, use_cuda=True):
+    device = get_device(use_cuda)
+    print('Running on {}'.format(device))
     trainset = SupplementedAbstractSentencesDataset.from_txt('train', num_load=num_train)
     validset = SupplementedAbstractSentencesDataset.from_txt('dev', num_load=num_valid)
     trainloader, validloader = [DataLoader(ds, batch_size=batch_size) for ds in (trainset, validset)]
     model = _get_model(model_path, config).to(device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
-    model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader)
+    model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader, device)
     return model
