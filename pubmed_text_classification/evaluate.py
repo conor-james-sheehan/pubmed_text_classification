@@ -8,8 +8,11 @@ import torch
 from sklearn.metrics import accuracy_score, confusion_matrix
 from torch.utils.data import DataLoader
 
-from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset, AbstractSentencesDataset
+from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 from pubmed_text_classification.model import TransitionModelConfig, load_model
+from pubmed_text_classification.train import get_device
+
+# TODO: docstrings on API functions
 
 
 def _get_scores(y_test, y_pred_test):
@@ -25,10 +28,10 @@ class Results:
     META_FNAME = 'meta.json'
     SCORES_FNAME = 'scores.json'
 
-    def __init__(self, model, scores, valid_split, batch_size, n_epochs, lr):
+    def __init__(self, model, scores, batch_size, n_epochs, lr):
         self.model = model
         self.scores = scores
-        self.meta = dict(valid_split=valid_split, batch_size=batch_size, n_epochs=n_epochs, lr=lr)
+        self.meta = dict(batch_size=batch_size, n_epochs=n_epochs, lr=lr)
         self.results_dir = None
 
     def save(self, savedir):
@@ -74,108 +77,37 @@ def _predict(model, testloader):
     return np.concatenate(preds)
 
 
-def _load_test(test_path):
-    if test_path is None:
-        testset = SupplementedAbstractSentencesDataset.from_txt('test')
-    else:
-        testset = SupplementedAbstractSentencesDataset.from_csv(test_path)
-
-    return testset
-
-
-def evaluate(model, test_path, savedir, valid_split, batch_size, n_epochs, lr):
-    testset = _load_test(test_path)
+def evaluate(model, savedir, batch_size, n_epochs, lr):
+    testset = SupplementedAbstractSentencesDataset.from_txt('test')
     testloader = DataLoader(testset, batch_size=batch_size)
     y_test = testset.dataframe['label'].values
     y_pred_test = _predict(model, testloader)
     scores = _get_scores(y_test, y_pred_test)
-    results = Results(model, scores, valid_split, batch_size, n_epochs, lr)
+    results = Results(model, scores, batch_size, n_epochs, lr)
     results.save(savedir)
 
 
-def rolling_classify_csv(model, fpath):
+def classify(model, abstract_sentences):
     """
 
     :param model:
-    :type model: TransitionModel
-    :param fpath: path to a .csv file containing an unlabelled dataset.
-    :type fpath: str
+    :param abstract_sentences:
     :return:
     """
-    df = AbstractSentencesDataset.from_csv(fpath).dataframe
-    df['predicted_label'] = np.nan
-    gb = df.groupby('abstract')
-
-    for abstract in gb.groups:
-        abstract_df = gb.get_group(abstract)
-        predicted_classes = rolling_classify(model, abstract_df['sentence'])
-        for i, pred in enumerate(predicted_classes):
-            df.loc[abstract_df.index[i], 'predicted_label'] = pred
-    return df
+    abstract_sentences = list(map(_replace_digits, abstract_sentences))
+    df = pd.DataFrame(columns=SupplementedAbstractSentencesDataset.COLUMNS)
+    df['sentence'] = abstract_sentences
+    df = df.fillna(-1)
+    ds = SupplementedAbstractSentencesDataset(df)
+    testloader = DataLoader(ds, batch_size=len(abstract_sentences))
+    predicted = _predict(model, testloader)
+    return predicted
 
 
-def rolling_classify(model, sentences):
-    """
-    Classify sentences from a given abstract.
-
-    :param model:
-    :type model: TransitionModel
-    :param sentences:
-    type sentences: list[str]
-    :return: predicted_labels
-    :rtype: list[int]
-    """
-    model.eval()
-    sentences = map(_replace_digits, sentences)
-    y = torch.FloatTensor([-1.0])
-    predictions = []
-    for sentence in sentences:
-        X = [sentence], y
-        logits = model(X)
-        _, y = torch.max(logits.data, 1)
-        y = y.cpu()
-        predictions.append(y.item())
-    return predictions
-
-
-def classify(model, sentences, labels):
-    model.eval()
-    sentences = list(map(_replace_digits, sentences))
-    previous_labels = pd.Series(labels).shift(1).fillna(-1).tolist()
-    logits = model([sentences, torch.FloatTensor(previous_labels)])
-    _, y = torch.max(logits.data, 1)
-    predictions = y.cpu().numpy().tolist()
-    return predictions
-
-
-def rolling_classify_from_pretrained(sentences, pretrained_path):
-    """
-
-    :param sentences: list of sentences from an abstract
-    :type sentences: list[str]
-    :param pretrained_path: path to folder containing pretrained model pickle and config
-    :type pretrained_path: str
-    :return: predictions
-    :rtype: list[int]
-    """
-    model = _get_pretrained_model(pretrained_path)
-    return rolling_classify(model, sentences)
-
-
-def classify_from_pretrained(sentences, labels, pretrained_path):
-    """
-
-    :param sentences: list of sentences from an abstract
-    :type sentences: list[str]
-    :param labels: labels of the sentences
-    :type labels: list[int]
-    :param pretrained_path: path to folder containing pretrained model pickle and config
-    :type pretrained_path: str
-    :return: predictions
-    :rtype: list[int]
-    """
-    model = _get_pretrained_model(pretrained_path)
-    return classify(model, sentences, labels)
+def classify_from_pretrained(abstract_sentences, pretrained_path, use_cuda=True):
+    device = get_device(use_cuda)
+    model = _get_pretrained_model(pretrained_path, device)
+    return classify(model, abstract_sentences)
 
 
 def _replace_digits(sentence):
@@ -183,7 +115,7 @@ def _replace_digits(sentence):
     return re.sub(digit_regex, '@', sentence)
 
 
-def _get_pretrained_model(path):
+def _get_pretrained_model(path, device):
     config = TransitionModelConfig.from_json(os.path.join(path, 'config.json'))
-    model = load_model(os.path.join(path, 'model.pickle'), config)
+    model = load_model(os.path.join(path, 'model.pickle'), config, device)
     return model

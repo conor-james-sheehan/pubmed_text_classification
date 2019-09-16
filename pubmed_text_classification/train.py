@@ -6,32 +6,21 @@ import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader
 
 from pubmed_text_classification.model import TransitionModel, load_model, TransitionModelConfig
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model')  # temporary location to save best model during validation
 
-use_cuda = torch.cuda.is_available()
-device = 'cuda:0' if use_cuda else 'cpu'
-t = torch.cuda if use_cuda else torch
-print('Running on {}'.format(device))
+
+def get_device(use_cuda):
+    # TODO: move to a util file
+    device = 'cuda:0' if use_cuda and torch.cuda.is_available() else 'cpu'
+    return device
 
 
-def _split_data(train_path, num_train, valid_split):
-    # split the training set into training and validation
-    if train_path is None:
-        trainset = SupplementedAbstractSentencesDataset.from_txt('train', num_load=num_train)
-    else:
-        trainset = SupplementedAbstractSentencesDataset.from_csv(train_path)
-    num_valid = int(valid_split*len(trainset))
-    num_train = len(trainset) - num_valid
-    trainset, validset = random_split(trainset, [num_train, num_valid])
-    return trainset, validset
-
-
-def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader):
+def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader, device):
     print('epoch\t\ttrain_loss\tvalid_loss\tvalid_acc\ttime')
     print('=======================================================================')
     best_loss = np.inf
@@ -76,34 +65,40 @@ def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader):
     config = model.config
     del model
     torch.cuda.empty_cache()
-    model = load_model(VAL_SAVEPATH, config)
+    model = load_model(VAL_SAVEPATH, config, device)
     return model
 
 
-def _get_model(model_path, config):
+def _get_model(model_path, config, device):
     if config is None:
+        # create config w/ default options
         config = TransitionModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS)
     else:
         if isinstance(config, str):
             # assume config is a path to a .json config
             config = TransitionModelConfig.from_json(config)
         if isinstance(config, Mapping):
-            # kwargs to pass to config class init
+            # conifg is kwargs to pass to config class init
             config = TransitionModelConfig(**config)
 
     if model_path is None:
-        model_path = TransitionModel(config)
+        # make new model
+        model = TransitionModel(config)
     else:
-        model_path = load_model(model_path, config)
-    return model_path
+        model = load_model(model_path, config, device)
+    model.set_device(device)
+    return model
         
 
-def train(config=None, train_path=None, model_path=None, num_train=None, valid_split=0.2,
-          batch_size=256, n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss):
-    trainset, validset = _split_data(train_path, num_train, valid_split)
+def train(config=None, model_path=None, num_train=None, num_valid=None, batch_size=256,
+          n_epochs=100, lr=1e-3, optimizer=optim.Adam, criterion=nn.CrossEntropyLoss, use_cuda=True):
+    device = get_device(use_cuda)
+    print('Running on {}'.format(device))
+    trainset = SupplementedAbstractSentencesDataset.from_txt('train', num_load=num_train)
+    validset = SupplementedAbstractSentencesDataset.from_txt('dev', num_load=num_valid)
     trainloader, validloader = [DataLoader(ds, batch_size=batch_size) for ds in (trainset, validset)]
-    model = _get_model(model_path, config).to(device)
+    model = _get_model(model_path, config, device)
     criterion = criterion(reduction='mean')
     optimizer = optimizer(model.parameters(), lr=lr)
-    model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader)
+    model = _fit(model, optimizer, criterion, n_epochs, trainloader, validloader, device)
     return model

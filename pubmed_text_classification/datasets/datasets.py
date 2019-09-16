@@ -14,7 +14,7 @@ class AbstractSentencesDataset(Dataset):
 
     @classmethod
     def from_txt(cls, set, num_load=None):
-        assert set in ('train', 'test')
+        assert set in ('train', 'test', 'dev')
         path = os.path.join(resource_filename('pubmed_text_classification', 'datasets'),\
                             'pubmed20k', '{}_clean.txt'.format(set))
         with open(path, 'r') as infile:
@@ -60,19 +60,28 @@ class AbstractSentencesDataset(Dataset):
 
 
 class SupplementedAbstractSentencesDataset(AbstractSentencesDataset):
+    """
+    Abstract dataset, where the sentence is supplemented with some info: what number sentence it is in the abstract,
+    and the total number of sentences in abstract.
+    """
+    SENTENCE_NUM_LABEL = 'sentence_num'
+    TOTAL_SENTENCES_LABEL = 'total_sentences'
 
     def __init__(self, dataframe):
         super().__init__(dataframe)
         gb = self.dataframe.groupby('abstract')
-        prev_labels = []
+        sentence_nums = []
+        total_sentences = []
         for abstract in gb.groups:
             abs_df = gb.get_group(abstract)
-            prev_labels.append(abs_df['label'].shift(1).fillna(-1))
-        prev_labels = pd.concat(prev_labels, axis=0)
-        self.dataframe['previous_label'] = prev_labels.values
+            sentence_nums += abs_df.index.tolist()
+            total_sentences += [len(abs_df)]*len(abs_df)
+        self.dataframe[self.SENTENCE_NUM_LABEL] = sentence_nums
+        self.dataframe[self.TOTAL_SENTENCES_LABEL] = total_sentences
 
     def __getitem__(self, i):
         sentence, label = super().__getitem__(i)
-        prev_label = self.dataframe['previous_label'].iloc[i]
-        X = sentence, prev_label
+        sentence_num = self.dataframe[self.SENTENCE_NUM_LABEL].iloc[i]
+        total_sentences = self.dataframe[self.TOTAL_SENTENCES_LABEL].iloc[i]
+        X = sentence, sentence_num, total_sentences
         return X, label
