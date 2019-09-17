@@ -100,7 +100,7 @@ def classify(model, abstract_sentences):
     df = df.fillna(-1)
     ds = SupplementedAbstractSentencesDataset(df)
     testloader = DataLoader(ds, batch_size=len(abstract_sentences))
-    predicted = _predict(model, testloader)
+    predicted = _predict(model, testloader).tolist()
     return predicted
 
 

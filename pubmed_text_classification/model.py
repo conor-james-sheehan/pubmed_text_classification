@@ -96,7 +96,6 @@ class SentenceModelConfig:
     def from_json(cls, path):
         with open(path, 'r') as infile:
             _vars = json.load(infile)
-        # _vars['pretrained_embeddings'] = None
         return cls(**_vars)
 
 
