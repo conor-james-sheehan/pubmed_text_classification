@@ -29,7 +29,7 @@ def predict_json(zip_path, pretrained_path, output_path):
         labels += classify(abstract_sentences=sentences, model=model)
 
     for i in range(len(sentences_json['data'])):
-        sentences_json['data'][i][1] = labels[i]
+        sentences_json['data'][i][2] = labels[i]
 
     with open(output_path, 'w') as outfile:
         json.dump(sentences_json, outfile)
