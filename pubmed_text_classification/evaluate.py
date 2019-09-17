@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from torch.utils.data import DataLoader
 
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
-from pubmed_text_classification.model import TransitionModelConfig, load_model
+from pubmed_text_classification.model import SentenceModelConfig, load_model
 from pubmed_text_classification.train import get_device
 
 # TODO: docstrings on API functions
@@ -106,7 +106,7 @@ def classify(model, abstract_sentences):
 
 def classify_from_pretrained(abstract_sentences, pretrained_path, use_cuda=True):
     device = get_device(use_cuda)
-    model = _get_pretrained_model(pretrained_path, device)
+    model = get_pretrained_model(pretrained_path, device)
     return classify(model, abstract_sentences)
 
 
@@ -115,7 +115,7 @@ def _replace_digits(sentence):
     return re.sub(digit_regex, '@', sentence)
 
 
-def _get_pretrained_model(path, device):
-    config = TransitionModelConfig.from_json(os.path.join(path, 'config.json'))
+def get_pretrained_model(path, device):
+    config = SentenceModelConfig.from_json(os.path.join(path, 'config.json'))
     model = load_model(os.path.join(path, 'model.pickle'), config, device)
     return model

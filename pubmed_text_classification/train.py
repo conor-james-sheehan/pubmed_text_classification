@@ -8,7 +8,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from pubmed_text_classification.model import TransitionModel, load_model, TransitionModelConfig
+from pubmed_text_classification.model import SentenceModel, load_model, SentenceModelConfig
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 
 VAL_SAVEPATH = os.path.join(gettempdir(), 'model')  # temporary location to save best model during validation
@@ -72,18 +72,18 @@ def _fit(model, optimizer, criterion, num_epochs, trainloader, validloader, devi
 def _get_model(model_path, config, device):
     if config is None:
         # create config w/ default options
-        config = TransitionModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS)
+        config = SentenceModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS)
     else:
         if isinstance(config, str):
             # assume config is a path to a .json config
-            config = TransitionModelConfig.from_json(config)
+            config = SentenceModelConfig.from_json(config)
         if isinstance(config, Mapping):
             # conifg is kwargs to pass to config class init
-            config = TransitionModelConfig(**config)
+            config = SentenceModelConfig(**config)
 
     if model_path is None:
         # make new model
-        model = TransitionModel(config)
+        model = SentenceModel(config)
     else:
         model = load_model(model_path, config, device)
     model.set_device(device)

@@ -5,7 +5,7 @@ sys.path += list(map(os.path.abspath, ['..', '../..', '../../..']))
 from pubmed_text_classification.train import train
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 from pubmed_text_classification.evaluate import evaluate
-from pubmed_text_classification.model import TransitionModelConfig
+from pubmed_text_classification.model import SentenceModelConfig
 
 parser = ArgumentParser()
 parser.add_argument('--pretrained_embeddings', type=str,
@@ -29,8 +29,8 @@ def main():
     n_epochs = cmd_args.n_epochs
     batch_size = cmd_args.batch_size
     lr = cmd_args.lr
-    config = TransitionModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS,
-                                   pretrained_embeddings=pretrained_embdeddings)
+    config = SentenceModelConfig(SupplementedAbstractSentencesDataset.NUM_LABELS,
+                                 pretrained_embeddings=pretrained_embdeddings)
     model = train(config,  model_path=pretrained_model, n_epochs=n_epochs, batch_size=batch_size, lr=lr)
     evaluate(model, savedir, batch_size, n_epochs, lr)
 

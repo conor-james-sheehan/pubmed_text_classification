@@ -8,7 +8,7 @@ import torch
 
 from pubmed_text_classification.datasets import SupplementedAbstractSentencesDataset
 from pubmed_text_classification.evaluate import evaluate, classify
-from pubmed_text_classification.model import TransitionModelConfig, WORD2VEC_EMBEDDING_DIM
+from pubmed_text_classification.model import SentenceModelConfig, WORD2VEC_EMBEDDING_DIM
 from pubmed_text_classification.train import train
 
 DUMMY_VOCAB_SIZE = 500
@@ -18,11 +18,11 @@ test_sentences = ['a' for _ in range(10)]
 
 def main():
     dummy_word_to_ix = dict(unk=1)
-    cfg = TransitionModelConfig(output_dim=SupplementedAbstractSentencesDataset.NUM_LABELS,
-                                pretrained_embeddings=DUMMY_EMBEDDING,
-                                word_to_ix=dummy_word_to_ix,
-                                lstm_hidden_dim=128,
-                                lstm_layers=1)
+    cfg = SentenceModelConfig(output_dim=SupplementedAbstractSentencesDataset.NUM_LABELS,
+                              pretrained_embeddings=DUMMY_EMBEDDING,
+                              word_to_ix=dummy_word_to_ix,
+                              lstm_hidden_dim=128,
+                              lstm_layers=1)
     batch_size = 64
     n_epochs = 1
     lr = .01

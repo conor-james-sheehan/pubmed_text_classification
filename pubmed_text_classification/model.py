@@ -19,7 +19,7 @@ with ZipFile(word_to_ix_path, 'r') as zipfile:
 nltk.download('punkt')
 
 
-class TransitionModel(nn.Module):
+class SentenceModel(nn.Module):
 
     def __init__(self, config):
         super().__init__()
@@ -66,7 +66,7 @@ class TransitionModel(nn.Module):
         return logits
 
 
-class TransitionModelConfig:
+class SentenceModelConfig:
 
     def __init__(self, output_dim, pretrained_embeddings='../pretrained_embeddings/wikipedia-pubmed-and-PMC-w2v.bin',
                  lstm_hidden_dim=512, lstm_layers=2, dropout=0.5, final_hidden_dims=(256, 128),
@@ -101,7 +101,7 @@ class TransitionModelConfig:
 
 
 def load_model(path, config, device):
-    model = TransitionModel(config)
+    model = SentenceModel(config)
     model.load_state_dict(torch.load(path))
     model.set_device(device)
     return model
